@@ -8,6 +8,9 @@ boot: auto
 
 init: false
 
+environment:
+  DATA_DIR: "/config/comptainf"
+
 arch:
   - amd64
   - aarch64
