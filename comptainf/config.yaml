@@ -1,0 +1,11 @@
+name: ComptaInf
+version: "0.1.0"
+slug: comptainf
+description: Comptabilité pour infirmière indépendante
+startup: services
+boot: auto
+
+ports:
+  3000/tcp: 3000
+
+webui: http://[HOST\]:[PORT:3000]
