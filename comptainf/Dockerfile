@@ -1,13 +1,20 @@
-FROM node:22-alpine
-
-RUN apk add --no-cache git
+FROM node:22-bookworm
 
 WORKDIR /app
 
-RUN git clone https://github.com/nicasGit/ComptaInf.git .
+COPY package*.json ./
 
 RUN npm install
 
+RUN apt-get update && apt-get install -y \
+    poppler-utils \
+    tesseract-ocr \
+    graphicsmagick \
+    imagemagick \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY . .
+
 EXPOSE 3000
 
-CMD ["/run.sh"]
+CMD ["node", "server.js"]
