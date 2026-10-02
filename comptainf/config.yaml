@@ -2,10 +2,28 @@ name: ComptaInf
 version: "0.1.0"
 slug: comptainf
 description: Comptabilité pour infirmière indépendante
+
 startup: services
 boot: auto
+
+init: false
+
+arch:
+  - amd64
+  - aarch64
+  - armv7
 
 ports:
   3000/tcp: 3000
 
+ports_description:
+  3000/tcp: Interface Web ComptaInf
+
 webui: http://[HOST\]:[PORT:3000]
+
+map:
+  - config:rw
+
+options: {}
+
+schema: {}
