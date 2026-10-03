@@ -7,12 +7,10 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 
-ENV DATA_DIR=/config
-
 RUN git clone --depth 1 https://github.com/nicasGit/comptaInf.git .
 
 RUN npm ci
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "echo DATA_DIR=$DATA_DIR && node server.js"]
+CMD ["sh", "-c", "export DATA_DIR=/data && echo DATA_DIR=$DATA_DIR && node server.js"]
