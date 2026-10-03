@@ -15,4 +15,4 @@ RUN npm ci
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "echo DATA_DIR=$DATA_DIR && node server.js"]
