@@ -1,6 +1,5 @@
 FROM ghcr.io/home-assistant/base:latest
 
-# Installer Node.js, npm et git
 RUN apk add --no-cache \
     nodejs \
     npm \
@@ -8,10 +7,10 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 
-# Récupérer le code source de ComptaInf
+ENV DATA_DIR=/config
+
 RUN git clone --depth 1 https://github.com/nicasGit/comptaInf.git .
 
-# Installer les dépendances
 RUN npm ci
 
 EXPOSE 3000
