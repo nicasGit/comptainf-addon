@@ -1,32 +1,23 @@
-name: ComptaInf
-version: "0.1.0"
-slug: comptainf
-description: Comptabilité pour infirmière indépendante
-
-startup: services
-boot: auto
-
-init: false
-
-environment:
-  DATA_DIR: "/config/comptainf"
+name: "ComptaInf"
+version: "0.1.1"
+slug: "comptainf"
+description: "Comptabilité pour infirmière indépendante"
 
 arch:
-  - amd64
   - aarch64
-  - armv7
+  - amd64
+
+startup: application
+boot: auto
+init: false
 
 ports:
   3000/tcp: 3000
 
 ports_description:
-  3000/tcp: Interface Web ComptaInf
+  3000/tcp: "Interface Web ComptaInf"
 
-webui: http://[HOST\]:[PORT:3000]
-
-map:
-  - config:rw
+webui: "http://[HOST]:[PORT:3000]"
 
 options: {}
-
 schema: {}
