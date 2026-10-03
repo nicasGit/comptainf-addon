@@ -11,6 +11,8 @@ startup: application
 boot: auto
 init: false
 
+map:
+  - addon_config:rw
 
 
 ports:
