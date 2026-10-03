@@ -1,5 +1,5 @@
 name: "ComptaInf"
-version: "0.1.4"
+version: "0.1.5"
 slug: "comptainf"
 description: "Comptabilité pour infirmière indépendante"
 
@@ -13,9 +13,6 @@ init: false
 
 map:
   - addon_config:rw
-
-environment:
-  DATA_DIR: "/config"
 
 ports:
   3000/tcp: 3000
