@@ -1,5 +1,5 @@
 name: "ComptaInf"
-version: "0.1.1"
+version: "0.1.2"
 slug: "comptainf"
 description: "Comptabilité pour infirmière indépendante"
 
@@ -10,6 +10,10 @@ arch:
 startup: application
 boot: auto
 init: false
+
+build_from:
+  aarch64: "ghcr.io/home-assistant/aarch64-base:latest"
+  amd64: "ghcr.io/home-assistant/amd64-base:latest"
 
 ports:
   3000/tcp: 3000
