@@ -13,4 +13,4 @@ RUN npm ci
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "export DATA_DIR=/data && echo DATA_DIR=$DATA_DIR && node server.js"]
+CMD ["sh", "-c", "export DATA_DIR=/config && echo DATA_DIR=$DATA_DIR && node server.js"]
