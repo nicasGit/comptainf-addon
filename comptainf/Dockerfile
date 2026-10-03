@@ -1,5 +1,4 @@
-ARG BUILD_FROM
-FROM ${BUILD_FROM}
+FROM ghcr.io/home-assistant/base:latest
 
 # Installer Node.js, npm et git
 RUN apk add --no-cache \
@@ -7,16 +6,14 @@ RUN apk add --no-cache \
     npm \
     git
 
-# Récupérer l'application ComptaInf
 WORKDIR /app
 
+# Récupérer le code source de ComptaInf
 RUN git clone --depth 1 https://github.com/nicasGit/comptaInf.git .
 
-# Installer exactement les dépendances du package-lock
+# Installer les dépendances
 RUN npm ci
 
-# Port utilisé par ComptaInf
 EXPOSE 3000
 
-# Lancer l'application
 CMD ["node", "server.js"]
