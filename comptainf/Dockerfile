@@ -7,8 +7,10 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 
-ARG CACHEBUST=1
-RUN git clone --depth 1 https://github.com/nicasGit/comptaInf.git .
+ADD "https://api.github.com/repos/nicasGit/comptaInf/commits/main" /tmp/comptainf-version.json
+
+RUN git clone --depth 1 \
+    https://github.com/nicasGit/comptaInf.git .
 
 RUN npm ci
 
