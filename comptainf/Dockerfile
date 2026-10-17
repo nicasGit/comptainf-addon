@@ -3,7 +3,16 @@ FROM ghcr.io/home-assistant/base:latest
 RUN apk add --no-cache \
     nodejs \
     npm \
-    git
+    git \
+    python3 \
+    make \
+    g++ \
+    pkgconf \
+    cairo-dev \
+    pango-dev \
+    jpeg-dev \
+    giflib-dev \
+    pixman-dev
 
 WORKDIR /app
 
