@@ -57,4 +57,4 @@ ENV DATA_DIR=/config
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "export DATA_DIR=/config && echo DATA_DIR=$DATA_DIR && node server.js"]
