@@ -1,6 +1,8 @@
 
 FROM ghcr.io/home-assistant/base:latest
 
+RUN echo "***** BUILD ComptaInf *****"
+
 RUN apk add --no-cache \
     nodejs \
     npm \
@@ -17,10 +19,6 @@ RUN apk add --no-cache \
     poppler \
     poppler-utils
 
-RUN echo "=== INSTALLED PACKAGES ===" && \
-    apk info | grep poppler && \
-    echo "=== PDFTOCAIRO ===" && \
-    find / -name pdftocairo
 
 WORKDIR /app
 
