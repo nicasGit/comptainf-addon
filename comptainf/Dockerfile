@@ -17,6 +17,11 @@ RUN apk add --no-cache \
     poppler \
     poppler-utils
 
+RUN echo "=== INSTALLED PACKAGES ===" && \
+    apk info | grep poppler && \
+    echo "=== PDFTOCAIRO ===" && \
+    find / -name pdftocairo
+
 WORKDIR /app
 
 RUN git clone --depth 1 \
