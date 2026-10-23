@@ -1,7 +1,7 @@
 
 FROM ghcr.io/home-assistant/base:latest
 
-RUN echo "***** BUILD ComptaInf *****"
+RUN echo "***** BUILD ComptaInf 23.10.2026 *****"
 
 RUN apk add --no-cache \
     nodejs \
