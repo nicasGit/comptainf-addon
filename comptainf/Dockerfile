@@ -1,7 +1,10 @@
 
 FROM ghcr.io/home-assistant/base:latest
 
-RUN echo "***** BUILD ComptaInf 23.10.2026 *****"
+ENV NODE_ENV=production
+ENV DATA_DIR=/config
+
+RUN echo "***** BUILD ComptaInf 23.10.2026 *****" > $DATA_DIR/build_comptainf.txt
 
 RUN apk add --no-cache \
     nodejs \
@@ -22,14 +25,15 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 
+RUN echo "Clone Git" >> $DATA_DIR/build_comptainf.txt
+
 RUN git clone --depth 1 \
     https://github.com/nicasGit/comptaInf.git /app
 
-RUN npm ci
+RUN git rev-parse --short HEAD >> $DATA_DIR/build_comptainf.txt
 
-ENV NODE_ENV=production
-ENV DATA_DIR=/config
+RUN npm ci
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "export DATA_DIR=/config && echo DATA_DIR=$DATA_DIR && node server.js"]
+CMD ["sh", "-c", "export DATA_DIR=/config && cat $DATA_DIR/build_comptainf.txt && echo DATA_DIR=$DATA_DIR && node server.js"]
