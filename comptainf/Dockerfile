@@ -31,6 +31,8 @@ RUN echo "Clone Git" >> /tmp/build_comptainf.txt
 RUN echo "$BUILD_VERSION" && git clone --depth 1 \
     https://github.com/nicasGit/comptaInf.git /app
 
+RUN cd /app && git log -1 --oneline >> /tmp/build_comptainf.txt
+
 RUN npm install
 
 EXPOSE 3000
