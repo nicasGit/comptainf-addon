@@ -22,18 +22,19 @@ RUN apk add --no-cache \
     poppler \
     poppler-utils
 
+RUN npm ci
 
 WORKDIR /app
 
+ARG BUILD_VERSION
+
 RUN echo "Clone Git" >> /tmp/build_comptainf.txt
 
-RUN git clone --depth 1 \
+RUN echo "$BUILD_VERSION" && git clone --depth 1 \
     https://github.com/nicasGit/comptaInf.git /app
 
-RUN git rev-parse --short HEAD >> /tmp/build_comptainf.txt
-
-RUN npm ci
-
 EXPOSE 3000
+
+RUN echo "******* end dockerfile ********" >> /tmp/build_comptainf.txt
 
 CMD ["sh", "-c", "export DATA_DIR=/config && cat /tmp/build_comptainf.txt && echo DATA_DIR=$DATA_DIR && node server.js"]
