@@ -22,8 +22,6 @@ RUN apk add --no-cache \
     poppler \
     poppler-utils
 
-RUN npm ci
-
 WORKDIR /app
 
 ARG BUILD_VERSION
@@ -32,6 +30,8 @@ RUN echo "Clone Git" >> /tmp/build_comptainf.txt
 
 RUN echo "$BUILD_VERSION" && git clone --depth 1 \
     https://github.com/nicasGit/comptaInf.git /app
+
+RUN npm install
 
 EXPOSE 3000
 
