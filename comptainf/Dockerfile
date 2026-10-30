@@ -1,15 +1,23 @@
+FROM ghcr.io/home-assistant/base:latest AS source
 
-FROM ghcr.io/home-assistant/base:latest
+RUN apk add --no-cache git
+
+ARG CACHE_BUST=latest
+
+WORKDIR /source
+RUN echo "SOURCE_VERSION=${CACHE_BUST}" \
+    && git clone --depth 1 --branch master --single-branch \
+    https://github.com/nicasGit/comptaInf.git .
+
+
+FROM ghcr.io/home-assistant/base:latest AS dependencies
 
 ENV NODE_ENV=production
 ENV DATA_DIR=/config
 
-RUN echo "***** BUILD ComptaInf 23.10.2026 *****" > /tmp/build_comptainf.txt
-
 RUN apk add --no-cache \
     nodejs \
     npm \
-    git \
     python3 \
     make \
     g++ \
@@ -24,19 +32,32 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 
-ARG BUILD_VERSION
+COPY --from=source /source/package.json ./
+COPY --from=source /source/package-lock.json* ./
 
-RUN echo "Clone Git" >> /tmp/build_comptainf.txt
+RUN npm ci --omit=dev
 
-RUN echo "$BUILD_VERSION" && git clone --depth 1 \
-    https://github.com/nicasGit/comptaInf.git /app
 
-RUN cd /app && git log -1 --oneline >> /tmp/build_comptainf.txt
+FROM ghcr.io/home-assistant/base:latest
 
-RUN npm install
+ENV NODE_ENV=production
+ENV DATA_DIR=/config
+
+RUN apk add --no-cache \
+    nodejs \
+    npm \
+    cairo \
+    pango \
+    jpeg \
+    giflib \
+    poppler \
+    poppler-utils
+
+WORKDIR /app
+
+COPY --from=source /source /app/
+COPY --from=dependencies /app/node_modules /app/node_modules
 
 EXPOSE 3000
 
-RUN echo "******* end dockerfile ********" >> /tmp/build_comptainf.txt
-
-CMD ["sh", "-c", "export DATA_DIR=/config && cat /tmp/build_comptainf.txt && echo DATA_DIR=$DATA_DIR && node server.js"]
+CMD ["sh", "-c", "export DATA_DIR=/config && node server.js"]
