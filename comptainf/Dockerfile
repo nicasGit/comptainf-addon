@@ -6,7 +6,7 @@ ARG CACHE_BUST=latest
 
 WORKDIR /source
 RUN echo "SOURCE_VERSION=${CACHE_BUST}" \
-    && git clone --depth 1 --branch master --single-branch \
+    && git clone --depth 1 --branch main --single-branch \
     https://github.com/nicasGit/comptaInf.git .
 
 
