@@ -1,14 +1,21 @@
+ARG BUILD_VERSION=latest
+
 FROM ghcr.io/home-assistant/base:latest AS source
+ARG BUILD_VERSION
 
 RUN apk add --no-cache git
 
 ARG CACHE_BUST=latest
 
 WORKDIR /source
-RUN echo "SOURCE_VERSION=${CACHE_BUST}" \
-    && git clone --depth 1 --branch main --single-branch \
-    https://github.com/nicasGit/comptaInf.git .
 
+ARG BUILD_VERSION
+RUN apk add --no-cache curl \
+    && curl -fsSL \
+       "https://api.github.com/repos/nicasGit/comptaInf/commits/main" \
+       > /tmp/main.json \
+    && git clone --depth 1 --branch main \
+       https://github.com/nicasGit/comptaInf.git /app
 
 FROM ghcr.io/home-assistant/base:latest AS dependencies
 
