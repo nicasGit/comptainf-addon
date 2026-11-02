@@ -7,9 +7,11 @@ RUN apk add --no-cache git curl
 
 WORKDIR /source
 
-RUN echo "ComptaInf ${BUILD_VERSION}" \
+RUN echo "BUILD_VERSION=${BUILD_VERSION}" \
     && git clone --depth 1 --branch main --single-branch \
        https://github.com/nicasGit/comptaInf.git /source \
+    && git rev-parse HEAD \
+    && git log -1 --format="%cI" \
     && printf '{"commit":"%s","commitDate":"%s"}\n' \
        "$(git rev-parse HEAD)" \
        "$(git log -1 --format=%cI)" \
