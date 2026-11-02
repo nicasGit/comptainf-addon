@@ -7,12 +7,13 @@ RUN apk add --no-cache git curl
 
 WORKDIR /source
 
-RUN echo "Building ComptaInf add-on ${BUILD_VERSION}" \
-    && curl -fsSL \
-       "https://api.github.com/repos/nicasGit/comptaInf/commits/main" \
-       > /tmp/comptainf-main.json \
-    && git clone --depth 1 --branch main --single-branch \
-       https://github.com/nicasGit/comptaInf.git /source
+RUN git clone --depth 1 --branch main --single-branch \
+        https://github.com/nicasGit/comptaInf.git /source \
+    && printf '{"commit":"%s","commitDate":"%s"}\n' \
+       "$(git rev-parse HEAD)" \
+       "$(git log -1 --format=%cI)" \
+       > build-info.json
+
 
 FROM ghcr.io/home-assistant/base:latest AS dependencies
 
@@ -35,6 +36,9 @@ FROM ghcr.io/home-assistant/base:latest
 
 ENV NODE_ENV=production
 ENV DATA_DIR=/config
+
+ARG BUILD_VERSION=latest
+ENV APP_VERSION=$BUILD_VERSION
 
 RUN apk add --no-cache \
     nodejs npm cairo pango jpeg giflib \
