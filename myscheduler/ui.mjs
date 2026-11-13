@@ -9,6 +9,20 @@ let catalog = { entities: [], services: [] };
 let rules = [];
 let ruleSequence = 0;
 const openPrograms = new Set();
+let googleConnected = false;
+function updateSetup(connected, initial = false) {
+  const becameConnected = connected && !googleConnected;
+  googleConnected = connected;
+  $('googleSetupState').textContent = connected ? 'Connecté' : 'Non connecté · facultatif';
+  $('calendarSetupState').textContent = `${selectedCalendars.size} sélectionné(s)`;
+  if (connected && selectedCalendars.size && (initial || becameConnected)) {
+    $('googlePanel').open = false; $('calendarPanel').open = false;
+  } else if (initial) {
+    const weeklyOnly = rules.length > 0 && rules.every(rule => rule.source === 'weekly');
+    $('googlePanel').open = !connected && !weeklyOnly;
+    $('calendarPanel').open = !selectedCalendars.size;
+  }
+}
 
 function createRuleId() {
   const api = globalThis.crypto;
@@ -310,9 +324,11 @@ async function save() {
     calendarIds: [...selectedCalendars], dryRun: $('dryRun').checked, rules
   });
   $('clientSecret').value = ''; notice('Configuration enregistrée.');
+  updateSetup(googleConnected);
+  if (googleConnected && selectedCalendars.size) { $('googlePanel').open = false; $('calendarPanel').open = false; }
 }
 function bind(id, handler) { $(id).onclick = async () => { try { await handler(); } catch (e) { notice(e.message); } }; }
-bind('save', save); bind('saveRules', save);
+bind('save', save); bind('saveRules', save); bind('saveCalendars', save);
 bind('add', () => {
   const id = createRuleId(); openPrograms.add(id);
   rules.push({ id, source: 'calendar', name: '', keyword: 'Présence', entity: '', priority: 0, during: { service: '', data: {} }, after: { service: '', data: {} } });
@@ -330,7 +346,7 @@ bind('connect', async () => {
   link.href = result.url; link.target = '_blank'; link.rel = 'noopener'; $('connection').replaceChildren(link);
   notice('Clique sur le lien pour autoriser Google dans un nouvel onglet.');
 });
-bind('disconnect', async () => { await api('disconnect', {}); $('connection').textContent = 'Déconnecté'; notice('Compte déconnecté. Les entités conservent leur état actuel.'); });
+bind('disconnect', async () => { await api('disconnect', {}); updateSetup(false); $('connection').textContent = 'Déconnecté'; notice('Compte déconnecté. Les programmes hebdomadaires continuent.'); });
 bind('list', async () => {
   availableCalendars = await api('calendars', {});
   const primary = availableCalendars.find(c => c.primary);
@@ -344,10 +360,11 @@ try {
   selectedCalendars = new Set(s.config.calendarIds || ['primary']); renderCalendars();
   $('dryRun').checked = s.config.dryRun; rules = s.config.rules; renderRules();
   $('connection').textContent = s.connected ? 'Compte Google connecté' : 'Compte Google non connecté'; renderStatus(s.status);
+  updateSetup(s.connected, true);
   const base = location.pathname.endsWith('/') ? location.pathname : location.pathname + '/';
   $('suggestion').textContent = `Chemin de retour attendu : ${base}oauth/callback. Utiliser le domaine HTTPS de Home Assistant avec ce chemin.`;
   try { await loadCatalog(); } catch (e) { $('catalogStatus').textContent = e.message; }
 } catch (e) { notice(e.message); }
 setInterval(async () => {
-  try { const s = await api('state'); renderStatus(s.status); $('connection').textContent = s.connected ? 'Compte Google connecté' : 'Compte Google non connecté'; } catch {}
+  try { const s = await api('state'); renderStatus(s.status); updateSetup(s.connected); $('connection').textContent = s.connected ? 'Compte Google connecté' : 'Compte Google non connecté'; } catch {}
 }, 15000);

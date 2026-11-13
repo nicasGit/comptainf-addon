@@ -1,3 +1,10 @@
+# 0.4.1
+
+- Programmes et prochaines échéances placés en tête de page.
+- Connexion Google et sélection des calendriers déplacées en bas dans deux cartes repliables.
+- Cartes fermées une fois la connexion et la sélection configurées ; état et nombre de calendriers visibles.
+- Bouton d’enregistrement directement dans la carte des calendriers.
+
 # 0.4.0
 
 - Programmes hebdomadaires indépendants du calendrier et du compte Google.

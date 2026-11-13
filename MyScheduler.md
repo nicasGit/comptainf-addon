@@ -2,6 +2,10 @@
 
 Connexion directe à Google Calendar en lecture seule, sélection de plusieurs calendriers du même compte et règles par mots-clés pour les entités Home Assistant : thermostats, lumières, interrupteurs, volets, ventilateurs et autres entités exposant des actions ciblées.
 
+## Version 0.4.1 : programmes au premier plan
+
+Les programmes et les prochaines échéances sont placés en tête de page. La connexion Google et la sélection des calendriers sont dans deux cartes repliables en bas, fermées une fois Google connecté et des calendriers sélectionnés. Cliquer leur titre pour modifier la configuration ; le nombre de calendriers et l’état de connexion restent visibles. L’enregistrement des calendriers replie les cartes après configuration, sans modifier la sélection.
+
 ## Version 0.4.0 : programmes hebdomadaires et vue synthétique
 
 **Ajouter un programme hebdomadaire** crée un programme récurrent indépendant du calendrier. Donner un nom, choisir l’entité et les actions pendant/après, puis définir les jours et les horaires. Par exemple lundi/mardi/mercredi de 07:00 à 22:00. Aucun compte Google ni mot-clé n’est nécessaire. Plusieurs programmes peuvent viser la même entité : la priorité la plus élevée gagne, comme pour les programmes calendrier.
