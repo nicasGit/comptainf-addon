@@ -1,3 +1,8 @@
+# 0.1.2
+
+- Correction du bouton « Ajouter une règle » sur les navigateurs sans `crypto.randomUUID`, notamment dans certains contextes HTTP ou Ingress.
+- Identifiants compatibles avec les navigateurs plus anciens, sans changement des règles existantes.
+
 # 0.1.1
 
 - Sélection de plusieurs calendriers Google avec des cases à cocher.

@@ -30,6 +30,16 @@ const $ = id => document.getElementById(id);
 let csrf;
 let selectedCalendars = new Set(['primary']);
 let availableCalendars = [];
+let ruleSequence = 0;
+function createRuleId(){
+ const cryptoApi=globalThis.crypto;
+ if(typeof cryptoApi?.randomUUID==='function')return cryptoApi.randomUUID();
+ if(typeof cryptoApi?.getRandomValues==='function'){
+  return Array.from(cryptoApi.getRandomValues(new Uint32Array(4)),value=>value.toString(16).padStart(8,'0')).join('');
+ }
+ // Rule identifiers are not authentication tokens. Support older/HTTP contexts too.
+ return `rule-${Date.now().toString(36)}-${++ruleSequence}-${Math.random().toString(36).slice(2)}`;
+}
 function renderCalendars(){
  const choices=new Map(availableCalendars.map(c=>[c.id,c.summary||c.id]));
  for(const id of selectedCalendars)if(!choices.has(id))choices.set(id,id==='primary'?'Calendrier principal':id);
@@ -42,7 +52,7 @@ async function api(path, data){
  const result=await response.json();if(!response.ok)throw Error(result.error||'Erreur de connexion');return result;
 }
 function renderStatus(status){notice(status.message);$('syncTime').textContent=status.lastSync?`Dernière synchronisation : ${new Date(status.lastSync).toLocaleString()}`:'Pas encore synchronisé';$('actions').textContent=status.actions.map(a=>`${a.entity} → ${a.temperature} °C`).join('\n')||'Aucune action';$('events').textContent=status.events.map(e=>{const calendar=availableCalendars.find(c=>c.id===e.calendarId);return `${new Date(e.start).toLocaleString()} → ${new Date(e.end).toLocaleString()} · [${calendar?.summary||e.calendarId||'Calendrier'}] ${e.title}`;}).join('\n')||'Aucun événement';}
-function addRule(rule={id:crypto.randomUUID(),keyword:'Présence',entity:'climate.salon',temperature:21,endTemperature:17,priority:0}){
+function addRule(rule={id:createRuleId(),keyword:'Présence',entity:'climate.salon',temperature:21,endTemperature:17,priority:0}){
  const row=document.createElement('div');row.className='rule';row.dataset.id=rule.id;
  for(const [key,label,type] of [['keyword','Mot-clé','text'],['entity','Entité Home Assistant','text'],['temperature','Température pendant (°C)','number'],['endTemperature','Température après (°C)','number'],['priority','Priorité','number']]){
   const wrap=document.createElement('label');wrap.textContent=label;const input=document.createElement('input');input.dataset.key=key;input.type=type;input.value=rule[key];if(type==='number')input.step=key==='priority'?'1':'0.5';wrap.append(input);row.append(wrap);
