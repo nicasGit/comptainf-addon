@@ -2,6 +2,16 @@
 
 Connexion directe à Google Calendar en lecture seule, sélection de plusieurs calendriers du même compte et règles par mots-clés pour les entités Home Assistant : thermostats, lumières, interrupteurs, volets, ventilateurs et autres entités exposant des actions ciblées.
 
+## Version 0.4.0 : programmes hebdomadaires et vue synthétique
+
+**Ajouter un programme hebdomadaire** crée un programme récurrent indépendant du calendrier. Donner un nom, choisir l’entité et les actions pendant/après, puis définir les jours et les horaires. Par exemple lundi/mardi/mercredi de 07:00 à 22:00. Aucun compte Google ni mot-clé n’est nécessaire. Plusieurs programmes peuvent viser la même entité : la priorité la plus élevée gagne, comme pour les programmes calendrier.
+
+Les programmes sont présentés en cartes repliables : nom, type, activation, priorité, entité et résumé des jours/heures. La recherche et le filtre par type permettent de retrouver un programme. Cliquer la carte pour modifier, utiliser **Tout replier** pour revenir à la synthèse. La duplication crée une copie en pause pour permettre son adaptation avant activation. Toutes les modifications, y compris pause et duplication, nécessitent **Enregistrer**.
+
+Un programme hebdomadaire doit contenir au moins une plage. À la sortie, son action après s’applique sauf si un autre programme prend le relais. Une mise en pause d’un programme appliqué déclenche aussi la réconciliation vers le programme suivant ou son action après. Les plages de nuit, fuseaux et changements d’heure suivent les mêmes règles que les plages des journées entières.
+
+Les programmes hebdomadaires continuent si Google est indisponible ou déconnecté. Les règles calendrier ne sont pas recalculées sur une réponse partielle : leur dernier gagnant appliqué est conservé jusqu’au retour de Google, à moins que la règle soit supprimée ou mise en pause. Ce gagnant conservé participe aux priorités avec les programmes hebdomadaires. Un candidat calendrier qui ne gagnait pas précédemment ne peut pas être retrouvé avant le retour de Google.
+
 ## Version 0.3.1 : thème clair et libellés français
 
 L’interface utilise un thème clair. Les libellés anglais courants d’entités et les actions sont traduits dans MyScheduler, tout en gardant les identifiants Home Assistant visibles et inchangés. La recherche accepte le nom français, le nom d’origine ou l’identifiant, sans imposer les accents. Les noms personnalisés inconnus sont conservés ; aucun renommage n’est effectué dans HA. Les valeurs des options restent envoyées dans leur format d’origine.
@@ -82,7 +92,7 @@ Les secrets et jetons sont stockés dans `/data/state.json`, avec permissions re
 - Récurrences développées par Google. Les événements avec horaires sont comparés en temps absolu ; les événements toute la journée suivent l’option et le fuseau propres à chaque règle.
 - Pour chaque entité, la priorité la plus élevée gagne. À égalité : identifiant de règle, puis identifiant d’événement. Quand le gagnant finit, une autre règle encore active prend le relais ; sinon l’action après du dernier gagnant est exécutée. Une seule règle gagne par entité, même si des règles concernent des paramètres différents.
 - Suppression d’un événement ou d’une règle active : exécution de son action après, une fois la synchronisation réussie. Même principe lors d’un changement de calendrier.
-- Les erreurs Google n’entraînent aucune nouvelle commande. Les erreurs HA sont retentées. L’état persistant permet de reprendre une règle après redémarrage. Une commande peut être répétée après une coupure entre son envoi et la sauvegarde : préférer des actions explicites telles que `turn_on`, `turn_off` et `set_temperature`, plutôt que `toggle` ou une action irréversible. Il n’y a pas de garantie « exactement une fois ».
+- Les erreurs Google conservent les dernières actions calendaires et n’arrêtent pas les programmes hebdomadaires. Les erreurs HA sont retentées. L’état persistant permet de reprendre une règle après redémarrage. Une commande peut être répétée après une coupure entre son envoi et la sauvegarde : préférer des actions explicites telles que `turn_on`, `turn_off` et `set_temperature`, plutôt que `toggle` ou une action irréversible. Il n’y a pas de garantie « exactement une fois ».
 - L’action pendant est exécutée à l’activation, au changement du gagnant ou de ses paramètres, puis mémorisée : elle n’est pas renvoyée toutes les minutes. Chaque nouvelle occurrence d’événement peut déclencher l’action, même avec les mêmes paramètres. L’action après ne restaure pas automatiquement l’état précédent.
 - Activer la simulation suspend les commandes, y compris les actions après. Les règles précédemment appliquées sont conservées pour réconciliation lorsque la simulation est désactivée.
 

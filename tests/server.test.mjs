@@ -58,6 +58,12 @@ test('HTTP interface, protected settings and OAuth initiation', async () => {
     assert.equal((await fetch(base + 'api/catalog', { method: 'POST', headers })).status, 400);
     const badRule = { ...genericRule, during: { service: 'light.turn_on', data: { entity_id: 'all' } } };
     assert.equal((await fetch(base + 'api/config', { method: 'POST', headers, body: JSON.stringify({ ...config, rules: [badRule] }) })).status, 400);
+    const weekly = { ...genericRule, source: 'weekly', keyword: undefined, name: 'Weekly without Google', weekly: genericRule.allDay };
+    const offline = await fetch(base + 'api/config', { method: 'POST', headers, body: JSON.stringify({ ...config, clientId: '', clientSecret: '', redirectUri: '', rules: [weekly] }) });
+    assert.equal(offline.status, 200);
+    assert.equal((await (await fetch(base + 'api/state')).json()).config.rules[0].source, 'weekly');
+    // Restore credentials for the OAuth checks below.
+    assert.equal((await fetch(base + 'api/config', { method: 'POST', headers, body: JSON.stringify(config) })).status, 200);
     const connect = await fetch(base + 'api/connect', { method: 'POST', headers });
     const target = new URL((await connect.json()).url);
     assert.equal(target.hostname, 'accounts.google.com');

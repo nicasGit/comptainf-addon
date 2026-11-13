@@ -6,6 +6,7 @@ import { plan, validateRules } from './engine.mjs';
 import { calendarIds, collectEvents } from './calendars.mjs';
 import { actionSignature } from './actions.mjs';
 import { createHomeAssistant } from './home-assistant.mjs';
+import { calendarSnapshot } from './snapshot.mjs';
 
 const directory = process.env.DATA_DIR || './data';
 await mkdir(directory, { recursive: true, mode: 0o700 });
@@ -72,8 +73,9 @@ async function tick() {
   if (busy) return;
   busy = true;
   try {
-    const events = await collectEvents(state.config.calendarIds, google);
-    const result = plan(events, state.config.rules, state.config.dryRun ? { ...state.active, ...simulatedActive } : state.active);
+    const snapshotCalendar = await calendarSnapshot(state.config.rules, () => collectEvents(state.config.calendarIds, google));
+    const { events } = snapshotCalendar;
+    const result = plan(events, state.config.rules, state.config.dryRun ? { ...state.active, ...simulatedActive } : state.active, Date.now(), snapshotCalendar);
     const actions = Object.values(result.desired);
     // Retain outgoing rules until every command succeeds, including across restart.
     if (!state.config.dryRun) {
@@ -93,7 +95,7 @@ async function tick() {
       await save();
       simulatedActive = {};
     } else simulatedActive = result.active;
-    status = { message: state.config.dryRun ? 'Simulation : aucune commande envoyée.' : 'Planification active.',
+    status = { message: `${state.config.dryRun ? 'Simulation : aucune commande envoyée.' : 'Planification active.'}${snapshotCalendar.warning ? ` ${snapshotCalendar.warning}` : ''}`,
       events: events.map(e => ({ title: e.summary || '', calendarId: e.calendarId, allDay: Boolean(e.start?.date), start: e.start?.dateTime || e.start?.date, end: e.end?.dateTime || e.end?.date })),
       actions, lastSync: new Date().toISOString() };
   } catch (e) { status.message = e.message; }
@@ -143,13 +145,16 @@ const server = http.createServer(async (req, res) => {
     if (busy) { json(res, { error: 'Synchronisation en cours, réessayer dans quelques secondes.' }, 409); return; }
     if (path === '/api/config') {
       const input = await body(req);
-      const redirect = new URL(input.redirectUri);
-      if (!(redirect.protocol === 'https:' || (redirect.protocol === 'http:' && redirect.hostname === 'localhost')) || !redirect.pathname.endsWith('/oauth/callback') || redirect.search || redirect.hash || redirect.username || redirect.password) throw Error('URL de retour HTTPS finissant par /oauth/callback requise (localhost autorisé en développement).');
       const rules = validateRules(input.rules);
+      const needsGoogle = rules.some(rule => rule.source !== 'weekly' && rule.enabled !== false);
+      if (needsGoogle || input.redirectUri) {
+        const redirect = new URL(input.redirectUri);
+        if (!(redirect.protocol === 'https:' || (redirect.protocol === 'http:' && redirect.hostname === 'localhost')) || !redirect.pathname.endsWith('/oauth/callback') || redirect.search || redirect.hash || redirect.username || redirect.password) throw Error('URL de retour HTTPS finissant par /oauth/callback requise (localhost autorisé en développement).');
+      }
       const selectedCalendars = calendarIds(input);
-      if (typeof input.clientId !== 'string' || !input.clientId.trim() || typeof input.dryRun !== 'boolean') throw Error('Configuration incomplète.');
+      if (typeof input.clientId !== 'string' || needsGoogle && !input.clientId.trim() || typeof input.dryRun !== 'boolean') throw Error('Configuration incomplète.');
       if (input.clientSecret && typeof input.clientSecret !== 'string') throw Error('Secret invalide.');
-      if (!(input.clientSecret || state.config.clientSecret)) throw Error('Secret OAuth requis.');
+      if (needsGoogle && !(input.clientSecret || state.config.clientSecret)) throw Error('Secret OAuth requis.');
       if (input.clientId !== state.config.clientId) state.tokens = {};
       state.config = { clientId: input.clientId.trim(), clientSecret: input.clientSecret || state.config.clientSecret,
         redirectUri: input.redirectUri, calendarIds: selectedCalendars, dryRun: input.dryRun, rules };
@@ -166,7 +171,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (path === '/api/disconnect') {
       // Local disconnect; Google account permissions can additionally be revoked by the owner.
-      state.tokens = {}; pending = null; await save(); status.message = 'Compte déconnecté. Aucune nouvelle commande.'; json(res, { ok: true }); return;
+      state.tokens = {}; pending = null; await save(); status.message = 'Compte Google déconnecté. Les programmes hebdomadaires continuent.'; json(res, { ok: true }); return;
     }
     if (path === '/api/calendars') { json(res, await google('users/me/calendarList')); return; }
     if (path === '/api/sync') { await tick(); json(res, status); return; }

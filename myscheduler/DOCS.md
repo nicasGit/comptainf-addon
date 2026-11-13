@@ -1,5 +1,13 @@
 # MyScheduler
 
+## Programmes hebdomadaires sans calendrier
+
+Cliquer **Ajouter un programme hebdomadaire**, donner un nom, choisir l’entité et les actions pendant/après, puis cocher les jours et saisir les heures. Aucun compte Google ni mot-clé n’est nécessaire. Par exemple : lundi/mardi/mercredi 07:00–22:00. Les programmes continuent pendant une panne Google.
+
+Les cartes affichent un résumé des horaires et se déplient pour l’édition. Utiliser la recherche, le filtre par type et **Tout replier**. La duplication crée une copie en pause ; enregistrer pour appliquer la copie, les modifications et les pauses. Les priorités départagent tous les programmes actifs sur la même entité, quel que soit leur type.
+
+## Programmes depuis Google Calendar
+
 Planifie les actions des entités Home Assistant à partir des événements de ton Google Calendar personnel.
 
 1. Démarrer le module et ouvrir son interface Web.

@@ -8,6 +8,7 @@ let availableCalendars = [];
 let catalog = { entities: [], services: [] };
 let rules = [];
 let ruleSequence = 0;
+const openPrograms = new Set();
 
 function createRuleId() {
   const api = globalThis.crypto;
@@ -160,19 +161,21 @@ function renderAction(parent, rule, phase, title, owner = rule) {
 const weekdays = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 function renderSchedule(parent, rule) {
   const box = element('div', undefined, 'wide schedule');
+  const weekly = rule.source === 'weekly';
+  if (weekly) rule.weekly ||= { enabled: true, timeZone: 'Europe/Zurich', periods: [{ id: createRuleId(), days: [1, 2, 3], start: '07:00', end: '22:00', mode: 'during' }] };
   const enabled = element('input'); enabled.type = 'checkbox'; enabled.checked = Boolean(rule.allDay?.enabled);
   const toggle = element('label'); toggle.append(enabled, document.createTextNode(' Prendre en compte les événements « toute la journée »'));
-  box.append(toggle); parent.append(box);
+  if (!weekly) box.append(toggle); parent.append(box);
   enabled.onchange = () => {
     rule.allDay ||= { enabled: false, timeZone: 'Europe/Zurich', periods: [] };
     rule.allDay.enabled = enabled.checked; renderRules();
   };
-  if (!rule.allDay?.enabled) return;
-  const schedule = rule.allDay;
+  if (!weekly && !rule.allDay?.enabled) return;
+  const schedule = weekly ? rule.weekly : rule.allDay;
   const zone = element('input'); zone.value = schedule.timeZone; zone.placeholder = 'Europe/Zurich'; zone.required = true;
   zone.oninput = () => { schedule.timeZone = zone.value; }; labeled(box, 'Fuseau horaire des plages', zone);
-  box.append(element('p', 'Le mot-clé doit correspondre à un événement du calendrier. Les jours cochés sont les jours de début des plages. Une fin inférieure ou égale au début signifie le lendemain (22:00 → 07:00 passe minuit).'));
-  box.append(element('p', 'Sans plage : action pendant toute la journée. Avec des plages : aucune action avant la première plage ; à la fin d’une plage, l’action après s’applique, sauf si une autre plage ou règle prend le relais. Une plage de nuit se termine le lendemain même si l’événement ne couvre que la veille.'));
+  box.append(element('p', weekly ? 'Chaque semaine, sans calendrier ni mot-clé. Les jours cochés sont les jours de début. Une plage 22:00 → 07:00 se termine le lendemain.' : 'Le mot-clé doit correspondre à un événement du calendrier. Les jours cochés sont les jours de début des plages. Une fin inférieure ou égale au début signifie le lendemain (22:00 → 07:00 passe minuit).'));
+  box.append(element('p', weekly ? 'Ajouter au moins une plage. Hors plage, l’action après est appliquée à la sortie, sauf si un autre programme prend le relais. Aucune action avant la première activation.' : 'Sans plage : action pendant toute la journée. Avec des plages : aucune action avant la première plage ; à la fin d’une plage, l’action après s’applique, sauf si une autre plage ou règle prend le relais. Une plage de nuit se termine le lendemain même si l’événement ne couvre que la veille.'));
   for (const [index, period] of schedule.periods.entries()) {
     const slot = element('fieldset', undefined, 'period'); slot.append(element('legend', `Plage ${index + 1}`));
     const days = element('div', undefined, 'weekdays');
@@ -212,14 +215,48 @@ function renderSchedule(parent, rule) {
     box.append(element('small', 'Cet exemple utilise pendant pour monter, après pour baisser et une action spécifique à choisir pour arrêter le mercredi.'));
   }
 }
+function programTitle(rule) { return rule.name?.trim() || (rule.source === 'weekly' ? 'Programme hebdomadaire' : rule.keyword || 'Programme calendrier'); }
+function briefAction(action) {
+  if (!action?.service) return 'à choisir';
+  const parameters = Object.entries(action.data).map(([key, value]) => `${fieldNames[key] || key} : ${Array.isArray(value) || value && typeof value === 'object' ? JSON.stringify(value) : valueLabel(value)}`).join(', ');
+  return `${serviceName({ id: action.service })}${parameters ? ` — ${parameters}` : ''}`;
+}
+function programOverview(rule) {
+  const schedule = rule.source === 'weekly' ? rule.weekly : rule.allDay?.enabled ? rule.allDay : null;
+  if (rule.source === 'weekly' && !schedule) return 'Plages hebdomadaires à configurer';
+  if (!schedule) return `Mot-clé : ${rule.keyword || 'à renseigner'} · horaires des événements`;
+  if (!schedule.periods.length) return 'Journées entières · sans plages';
+  return schedule.periods.map(period => `${period.days.map(day => weekdays[day - 1]?.slice(0, 3)).join('/')} ${period.start}–${period.end}${period.end <= period.start ? ' (+1 jour)' : ''} · ${period.mode === 'during' ? 'Pendant' : period.mode === 'after' ? 'Après' : 'Spécifique'}`).join(' | ');
+}
 function renderRules() {
   $('rules').replaceChildren();
+  const query = searchText($('programSearch').value);
+  const sourceFilter = $('programSource').value;
+  $('programCount').textContent = `${rules.length} programme(s) · ${rules.filter(rule => rule.enabled !== false).length} actif(s). Enregistrer pour appliquer les changements.`;
   for (const rule of rules) {
+    if (sourceFilter !== 'all' && (rule.source || 'calendar') !== sourceFilter) continue;
+    if (query && !searchText(`${programTitle(rule)} ${rule.keyword || ''} ${rule.entity} ${programOverview(rule)}`).includes(query)) continue;
+    const card = element('details', undefined, `program-card${rule.enabled === false ? ' paused' : ''}`);
+    card.open = openPrograms.has(rule.id);
+    const summary = element('summary');
+    function refreshSummary() {
+      summary.replaceChildren(element('strong', programTitle(rule)), element('span', `${rule.enabled === false ? 'En pause' : 'Actif'} · ${rule.source === 'weekly' ? 'Hebdomadaire' : 'Calendrier'} · priorité ${rule.priority}`, 'badge'), element('span', rule.entity || 'Entité à choisir', 'program-entity'), element('span', programOverview(rule), 'program-overview'));
+      summary.append(element('span', `Pendant : ${briefAction(rule.during)} | Après : ${briefAction(rule.after)}`, 'program-overview'));
+    }
+    refreshSummary(); card.append(summary);
+    card.ontoggle = () => { if (card.open) openPrograms.add(rule.id); else openPrograms.delete(rule.id); };
     const row = element('div', undefined, 'rule');
-    const keyword = element('input'); keyword.value = rule.keyword; keyword.required = true; keyword.oninput = () => { rule.keyword = keyword.value; };
-    labeled(row, 'Mot-clé du titre', keyword);
+    row.addEventListener('input', refreshSummary); row.addEventListener('change', refreshSummary);
+    const name = element('input'); name.value = rule.name || ''; name.maxLength = 120; name.placeholder = 'Ex. Chauffage semaine – salon'; name.oninput = () => { rule.name = name.value; refreshSummary(); }; labeled(row, 'Nom du programme', name);
+    const source = element('select'); option(source, 'calendar', 'Calendrier · mot-clé'); option(source, 'weekly', 'Hebdomadaire · hors calendrier'); source.value = rule.source || 'calendar';
+    source.onchange = () => { rule.source = source.value; renderRules(); }; labeled(row, 'Déclenchement', source);
+    const enabled = element('input'); enabled.type = 'checkbox'; enabled.checked = rule.enabled !== false; enabled.onchange = () => { rule.enabled = enabled.checked; refreshSummary(); card.classList.toggle('paused', !enabled.checked); }; const toggle = element('label'); toggle.append(enabled, document.createTextNode(' Programme activé')); row.append(toggle);
+    if (rule.source !== 'weekly') {
+      const keyword = element('input'); keyword.value = rule.keyword || ''; keyword.required = true; keyword.oninput = () => { rule.keyword = keyword.value; refreshSummary(); };
+      labeled(row, 'Mot-clé du titre', keyword);
+    }
     const priority = element('input'); priority.type = 'number'; priority.step = '1'; priority.min = '-1000'; priority.max = '1000'; priority.value = rule.priority; priority.required = true;
-    priority.oninput = () => { rule.priority = Number(priority.value); }; labeled(row, 'Priorité', priority);
+    priority.oninput = () => { rule.priority = Number(priority.value); refreshSummary(); }; labeled(row, 'Priorité', priority);
     const entityBox = element('div', undefined, 'wide');
     const search = element('input'); search.type = 'search'; search.placeholder = 'Rechercher par nom ou identifiant';
     labeled(entityBox, 'Rechercher une entité', search);
@@ -238,6 +275,7 @@ function renderRules() {
       rule.entity = select.value;
       rule.during = { service: '', data: {} }; rule.after = { service: '', data: {} };
       for (const period of rule.allDay?.periods || []) if (period.mode === 'custom') period.action = { service: '', data: {} };
+      for (const period of rule.weekly?.periods || []) if (period.mode === 'custom') period.action = { service: '', data: {} };
       renderRules();
     };
     const entity = catalog.entities.find(e => e.entity_id === rule.entity);
@@ -249,7 +287,12 @@ function renderRules() {
     renderSchedule(row, rule);
     const remove = element('button', 'Supprimer cette règle', 'secondary');
     remove.onclick = () => { rules = rules.filter(r => r !== rule); renderRules(); }; row.append(remove);
-    $('rules').append(row);
+    const duplicate = element('button', 'Dupliquer le programme', 'secondary');
+    duplicate.onclick = () => {
+      const copy = JSON.parse(JSON.stringify(rule)); copy.id = createRuleId(); copy.name = `${programTitle(rule)} (copie)`.slice(0, 120); copy.enabled = false;
+      rules.push(copy); openPrograms.add(copy.id); renderRules();
+    }; row.append(duplicate);
+    card.append(row); $('rules').append(card);
   }
 }
 async function loadCatalog() {
@@ -258,7 +301,10 @@ async function loadCatalog() {
   renderRules(); $('catalogStatus').textContent = `${catalog.entities.length} entités chargées.`;
 }
 async function save() {
-  for (const control of $('rules').querySelectorAll('input,select,textarea')) if (!control.reportValidity()) return;
+  for (const control of $('rules').querySelectorAll('input,select,textarea')) if (!control.checkValidity()) {
+    for (let node = control.parentElement; node; node = node.parentElement) if (node.tagName === 'DETAILS') node.open = true;
+    control.reportValidity(); return;
+  }
   await api('config', {
     clientId: $('clientId').value, clientSecret: $('clientSecret').value, redirectUri: $('redirectUri').value,
     calendarIds: [...selectedCalendars], dryRun: $('dryRun').checked, rules
@@ -268,9 +314,16 @@ async function save() {
 function bind(id, handler) { $(id).onclick = async () => { try { await handler(); } catch (e) { notice(e.message); } }; }
 bind('save', save); bind('saveRules', save);
 bind('add', () => {
-  rules.push({ id: createRuleId(), keyword: 'Présence', entity: '', priority: 0, during: { service: '', data: {} }, after: { service: '', data: {} } });
+  const id = createRuleId(); openPrograms.add(id);
+  rules.push({ id, source: 'calendar', name: '', keyword: 'Présence', entity: '', priority: 0, during: { service: '', data: {} }, after: { service: '', data: {} } });
   renderRules();
 });
+bind('addWeekly', () => {
+  const id = createRuleId(); openPrograms.add(id);
+  rules.push({ id, source: 'weekly', name: '', entity: '', priority: 0, during: { service: '', data: {} }, after: { service: '', data: {} } }); renderRules();
+});
+$('programSearch').oninput = renderRules; $('programSource').onchange = renderRules;
+bind('collapsePrograms', () => { openPrograms.clear(); renderRules(); });
 bind('loadEntities', async () => { await loadCatalog(); notice('Entités et actions Home Assistant actualisées.'); });
 bind('connect', async () => {
   const result = await api('connect', {}); const link = element('a', 'Ouvrir la connexion Google');

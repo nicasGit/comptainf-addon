@@ -1,3 +1,11 @@
+# 0.4.0
+
+- Programmes hebdomadaires indépendants du calendrier et du compte Google.
+- Plusieurs programmes nommés, avec cartes repliables, jours/heures visibles, recherche et filtre par type.
+- Mise en pause et duplication (copie en pause), modifications appliquées à l’enregistrement.
+- Priorités communes entre les programmes hebdomadaires et calendrier.
+- Les programmes hebdomadaires continuent pendant les erreurs Google ; les derniers gagnants calendaires sont conservés.
+
 # 0.3.1
 
 - Thème clair avec formulaires blancs et contrastes adaptés.
