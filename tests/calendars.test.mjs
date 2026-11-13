@@ -25,10 +25,10 @@ test('combine calendars, retain origin and distinguish identical event IDs', asy
   assert.notEqual(events[0].id, events[1].id);
   const rule = { id: 'presence', keyword: 'Présence', entity: 'climate.salon', temperature: 21, endTemperature: 17, priority: 0 };
   const first = plan(events, [rule], {}, now);
-  assert.equal(first.desired['climate.salon'], 21);
+  assert.equal(first.desired['climate.salon'].data.temperature, 21);
   const remaining = events.filter(e => e.id !== first.active['climate.salon'].eventId);
-  assert.equal(plan(remaining, [rule], first.active, now).desired['climate.salon'], 21);
-  assert.equal(plan([], [rule], first.active, now).desired['climate.salon'], 17);
+  assert.equal(plan(remaining, [rule], first.active, now).desired['climate.salon'].data.temperature, 21);
+  assert.equal(plan([], [rule], first.active, now).desired['climate.salon'].data.temperature, 17);
 });
 test('failed calendar rejects the entire snapshot instead of producing false end actions', async () => {
   await assert.rejects(collectEvents(['home', 'unavailable'], async path => {

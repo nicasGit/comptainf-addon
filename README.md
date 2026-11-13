@@ -16,7 +16,7 @@ Actualiser la boutique, puis installer le module souhaité dans **NJOSoftware Ad
 
 - **ComptaInf** : comptabilité pour infirmière indépendante.
 - **MyCompta** : dépenses et documents du foyer avec Google Sheets et Drive.
-- **MyScheduler** : règles de température pour les thermostats Home Assistant à partir de plusieurs calendriers du compte Google personnel. Connexion OAuth, priorités et simulation activée par défaut. [Installation et configuration Google](./MyScheduler.md).
+- **MyScheduler** : actions sur les entités Home Assistant depuis plusieurs calendriers Google personnels. Choix de l’entité, actions et paramètres pendant/après, priorités et simulation activée par défaut. [Installation et configuration Google](./MyScheduler.md).
 
 MyScheduler est une première version : la connexion Google et les commandes réelles restent à valider sur HAOS. Un accès HTTPS à Home Assistant est nécessaire pour son retour OAuth.
 

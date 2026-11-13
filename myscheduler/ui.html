@@ -2,9 +2,9 @@
 <html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MyScheduler</title>
 <style>
-:root{font-family:system-ui;color:#e6edf6;background:#111a28;color-scheme:dark}body{max-width:960px;margin:32px auto;padding:0 20px}h1{margin-bottom:4px}p{color:#acbdd0;line-height:1.6}section{background:#1a2739;border:1px solid #30445f;border-radius:14px;padding:22px;margin:20px 0}label{display:block;margin:14px 0 5px}input,select,button{font:inherit;padding:10px;border-radius:7px;border:1px solid #46607d}input:not([type=checkbox]),select{box-sizing:border-box;width:100%;background:#101c2e}button{cursor:pointer;background:#235780;color:white;margin:8px 6px 0 0}button.secondary{background:#293c52}.rule{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;border-top:1px solid #46607d;margin-top:20px;padding-top:10px}.rule label{margin:0}.rule input{margin-top:5px}.wide{grid-column:1/-1}pre{white-space:pre-wrap;overflow-wrap:anywhere}#notice{position:sticky;top:0;background:#223b57;padding:12px;border-radius:8px;z-index:1}small{color:#acbdd0}@media(max-width:600px){.rule{grid-template-columns:1fr}}
-</style>
-<h1>MyScheduler</h1><p>Tes calendriers Google pilotent tes thermostats.</p>
+:root{font-family:system-ui;color:#e6edf6;background:#111a28;color-scheme:dark}body{max-width:960px;margin:32px auto;padding:0 20px}h1{margin-bottom:4px}p{color:#acbdd0;line-height:1.6}section{background:#1a2739;border:1px solid #30445f;border-radius:14px;padding:22px;margin:20px 0}label{display:block;margin:14px 0 5px}input,select,textarea,button{font:inherit;padding:10px;border-radius:7px;border:1px solid #46607d}input:not([type=checkbox]),select,textarea{box-sizing:border-box;width:100%;background:#101c2e}button{cursor:pointer;background:#235780;color:white;margin:8px 6px 0 0}button.secondary{background:#293c52}.rule{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;border-top:1px solid #46607d;margin-top:20px;padding-top:10px}.rule label{margin:0}.rule input{margin-top:5px}.wide{grid-column:1/-1}pre{white-space:pre-wrap;overflow-wrap:anywhere}#notice{position:sticky;top:0;background:#223b57;padding:12px;border-radius:8px;z-index:1}small{color:#acbdd0}@media(max-width:600px){.rule{grid-template-columns:1fr}}
+fieldset{min-width:0;border:1px solid #46607d;border-radius:8px;padding:14px}legend{font-weight:600}details{margin-top:12px}summary{cursor:pointer}label>input,label>select,label>textarea{display:block;margin-top:5px}label>input[type=checkbox]{display:inline}textarea{font-family:monospace;resize:vertical}select{max-width:100%}</style>
+<h1>MyScheduler</h1><p>Tes calendriers Google pilotent tes entités Home Assistant.</p>
 <div id="notice" role="status">Chargement…</div>
 <section><h2>1 · Connexion Google</h2>
 <p>Créer un client OAuth « Application Web » avec l’API Google Calendar activée. L’accès demandé est en lecture seule.</p>
@@ -20,57 +20,9 @@
 <button class="secondary" id="list">Charger mes calendriers</button>
 <p><small>Enregistre après avoir changé la sélection. Au moins un calendrier est nécessaire.</small></p>
 <p>Le mot-clé est recherché dans le titre, sans tenir compte des majuscules. La priorité la plus élevée gagne. À égalité, l’identifiant de règle départage les actions.</p>
-<div id="rules"></div><button class="secondary" id="add">Ajouter une règle</button>
+<button class="secondary" id="loadEntities">Charger les entités Home Assistant</button><p id="catalogStatus" role="status">Chargement des entités…</p><div id="rules"></div><button class="secondary" id="add">Ajouter une règle</button>
 <label><input type="checkbox" id="dryRun" checked> Simulation : ne pas commander les appareils</label>
-<p><small>Seuls les événements avec horaires sont pris en compte. La température finale est une consigne explicite, pas une restauration de la température précédente.</small></p>
+<p><small>Seuls les événements avec horaires sont pris en compte. Les actions « après » sont explicites : elles ne restaurent pas automatiquement l’état précédent.</small></p>
 <button id="saveRules">Enregistrer</button><button id="sync">Synchroniser maintenant</button></section>
 <section><h2>3 · État et prochaines échéances</h2><p id="syncTime"></p><h3>Actions calculées</h3><pre id="actions"></pre><h3>Événements · 7 jours</h3><pre id="events"></pre></section>
-<script type="module">
-const $ = id => document.getElementById(id);
-let csrf;
-let selectedCalendars = new Set(['primary']);
-let availableCalendars = [];
-let ruleSequence = 0;
-function createRuleId(){
- const cryptoApi=globalThis.crypto;
- if(typeof cryptoApi?.randomUUID==='function')return cryptoApi.randomUUID();
- if(typeof cryptoApi?.getRandomValues==='function'){
-  return Array.from(cryptoApi.getRandomValues(new Uint32Array(4)),value=>value.toString(16).padStart(8,'0')).join('');
- }
- // Rule identifiers are not authentication tokens. Support older/HTTP contexts too.
- return `rule-${Date.now().toString(36)}-${++ruleSequence}-${Math.random().toString(36).slice(2)}`;
-}
-function renderCalendars(){
- const choices=new Map(availableCalendars.map(c=>[c.id,c.summary||c.id]));
- for(const id of selectedCalendars)if(!choices.has(id))choices.set(id,id==='primary'?'Calendrier principal':id);
- $('calendars').replaceChildren();
- for(const [id,name] of choices){const label=document.createElement('label');const input=document.createElement('input');input.type='checkbox';input.checked=selectedCalendars.has(id);input.onchange=()=>{if(input.checked)selectedCalendars.add(id);else selectedCalendars.delete(id);};label.append(input,document.createTextNode(` ${name}`));$('calendars').append(label);}
-}
-function notice(message){ $('notice').textContent=message; }
-async function api(path, data){
- const response=await fetch(`api/${path}`,data===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify(data)});
- const result=await response.json();if(!response.ok)throw Error(result.error||'Erreur de connexion');return result;
-}
-function renderStatus(status){notice(status.message);$('syncTime').textContent=status.lastSync?`Dernière synchronisation : ${new Date(status.lastSync).toLocaleString()}`:'Pas encore synchronisé';$('actions').textContent=status.actions.map(a=>`${a.entity} → ${a.temperature} °C`).join('\n')||'Aucune action';$('events').textContent=status.events.map(e=>{const calendar=availableCalendars.find(c=>c.id===e.calendarId);return `${new Date(e.start).toLocaleString()} → ${new Date(e.end).toLocaleString()} · [${calendar?.summary||e.calendarId||'Calendrier'}] ${e.title}`;}).join('\n')||'Aucun événement';}
-function addRule(rule={id:createRuleId(),keyword:'Présence',entity:'climate.salon',temperature:21,endTemperature:17,priority:0}){
- const row=document.createElement('div');row.className='rule';row.dataset.id=rule.id;
- for(const [key,label,type] of [['keyword','Mot-clé','text'],['entity','Entité Home Assistant','text'],['temperature','Température pendant (°C)','number'],['endTemperature','Température après (°C)','number'],['priority','Priorité','number']]){
-  const wrap=document.createElement('label');wrap.textContent=label;const input=document.createElement('input');input.dataset.key=key;input.type=type;input.value=rule[key];if(type==='number')input.step=key==='priority'?'1':'0.5';wrap.append(input);row.append(wrap);
- }
- const remove=document.createElement('button');remove.textContent='Supprimer';remove.className='secondary';remove.onclick=()=>row.remove();row.append(remove);$('rules').append(row);
-}
-async function save(){
- const rules=[...$('rules').children].map(row=>{const r={id:row.dataset.id};for(const input of row.querySelectorAll('input'))r[input.dataset.key]=input.type==='number'?Number(input.value):input.value;return r;});
- await api('config',{clientId:$('clientId').value,clientSecret:$('clientSecret').value,redirectUri:$('redirectUri').value,calendarIds:[...selectedCalendars],dryRun:$('dryRun').checked,rules});$('clientSecret').value='';notice('Configuration enregistrée.');
-}
-function action(id,handler){$(id).onclick=async()=>{try{await handler();}catch(e){notice(e.message);}};}
-action('save',save);action('saveRules',save);action('add',()=>addRule());
-action('connect',async()=>{const result=await api('connect',{});const link=document.createElement('a');link.href=result.url;link.target='_blank';link.rel='noopener';link.textContent='Ouvrir la connexion Google';$('connection').replaceChildren(link);notice('Clique sur le lien pour autoriser Google dans un nouvel onglet.');});
-action('disconnect',async()=>{await api('disconnect',{});$('connection').textContent='Déconnecté';notice('Compte déconnecté. Les thermostats conservent leur consigne actuelle.');});
-action('list',async()=>{availableCalendars=await api('calendars',{});const primary=availableCalendars.find(c=>c.primary);if(primary&&selectedCalendars.delete('primary'))selectedCalendars.add(primary.id);renderCalendars();notice('Coche les calendriers souhaités puis enregistre.');});
-action('sync',async()=>renderStatus(await api('sync',{})));
-try{const s=await api('state');csrf=s.csrf;for(const key of ['clientId','redirectUri'])$(key).value=s.config[key];selectedCalendars=new Set(s.config.calendarIds||[s.config.calendarId||'primary']);renderCalendars();$('dryRun').checked=s.config.dryRun;s.config.rules.forEach(addRule);$('connection').textContent=s.connected?'Compte Google connecté':'Compte Google non connecté';renderStatus(s.status);
- const base=location.pathname.endsWith('/')?location.pathname:location.pathname+'/';$('suggestion').textContent=`Chemin de retour attendu : ${base}oauth/callback. Utiliser le domaine HTTPS de Home Assistant avec ce chemin.`;
-}catch(e){notice(e.message);}
-setInterval(async()=>{try{const s=await api('state');renderStatus(s.status);$('connection').textContent=s.connected?'Compte Google connecté':'Compte Google non connecté';}catch{}},15000);
-</script></html>
+<script type="module" src="ui.mjs"></script></html>

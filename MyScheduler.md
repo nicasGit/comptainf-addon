@@ -1,6 +1,24 @@
 # MyScheduler · add-on Home Assistant OS
 
-Connexion directe à Google Calendar en lecture seule, sélection de plusieurs calendriers du même compte, règles par mots-clés et consignes de température sur les entités `climate` Home Assistant (notamment les vannes Zigbee2MQTT découvertes par MQTT).
+Connexion directe à Google Calendar en lecture seule, sélection de plusieurs calendriers du même compte et règles par mots-clés pour les entités Home Assistant : thermostats, lumières, interrupteurs, volets, ventilateurs et autres entités exposant des actions ciblées.
+
+## Version 0.2.0 : actions génériques
+
+L’éditeur charge les entités et les actions déclarées par Home Assistant. Pour chaque règle :
+
+1. Saisir le mot-clé du titre et la priorité.
+2. Rechercher une entité par son nom ou son identifiant, puis la sélectionner.
+3. Choisir une action **Pendant l’événement** et renseigner ses paramètres.
+4. Choisir indépendamment l’action **Après l’événement** et ses paramètres.
+5. Enregistrer puis contrôler le résultat en simulation.
+
+Exemples : `climate.set_temperature` à 21 °C puis à 17 °C ; `light.turn_on` à 60 % puis `light.turn_off` ; `switch.turn_on` puis `switch.turn_off` ; `cover.set_cover_position` à 80 puis à 20.
+
+Les champs numériques, listes de choix et booléens utilisent les métadonnées HA. Les modes et options utilisent aussi les attributs de l’entité quand ils sont disponibles. Les valeurs complexes et les paramètres supplémentaires peuvent être saisis en JSON. Les attributs actuels sont affichés en lecture seule : on modifie l’appareil par ses actions, pas en écrivant arbitrairement un attribut. La validité finale des paramètres dépend de l’intégration HA et de l’appareil ; les sélecteurs complexes ne sont pas tous rendus nativement.
+
+Les actions appartiennent au domaine de l’entité ou à `homeassistant`, avec ciblage d’entité déclaré. Les opérations globales sans cible et les actions de consultation avec réponse obligatoire sont exclues. La présence et la disponibilité de l’entité et de l’action sont vérifiées avant l’exécution réelle.
+
+Les anciennes règles de thermostat sont converties automatiquement avec leurs consignes pendant/après ; le compte Google, les calendriers et les priorités sont conservés.
 
 ## Version 0.1.1 : plusieurs calendriers
 
@@ -31,17 +49,17 @@ Les secrets et jetons sont stockés dans `/data/state.json`, avec permissions re
 
 ## Règles et comportement
 
-- Exemple : titre contenant « Présence », entité `climate.salon`, température 21 °C, température après 17 °C, priorité 0.
+- Exemple : titre contenant « Présence », entité `climate.salon`, action `climate.set_temperature` avec température 21 pendant et 17 après, priorité 0.
 - La simulation est activée à l’installation. Vérifier les actions calculées avant de la désactiver et d’enregistrer.
 - Actualisation toutes les 60 secondes, événements des sept prochains jours et de la dernière journée. Les événements déjà en cours sont repris au démarrage ; les événements entièrement terminés pendant une panne ne sont pas rejoués.
 - Récurrences développées par Google ; événements avec horaires uniquement. Les journées entières sont ignorées. Les dates avec décalage horaire sont comparées en temps absolu.
-- Pour chaque thermostat, la priorité la plus élevée gagne. À égalité : identifiant de règle, puis identifiant d’événement. Quand le gagnant finit, une autre règle encore active prend le relais ; sinon la consigne finale du dernier gagnant est appliquée.
-- Suppression d’un événement ou d’une règle active : application de sa consigne finale après synchronisation réussie. Même principe lors d’un changement de calendrier.
-- Les erreurs Google n’entraînent aucune nouvelle commande ; les consignes existantes restent en place. Les erreurs HA sont retentées. L’état persistant permet de reprendre une règle après redémarrage. Une commande peut être répétée après un arrêt entre son envoi et la sauvegarde : `set_temperature` est idempotente.
-- Une consigne manuelle n’est pas écrasée à chaque minute : l’add-on commande lors d’un changement de consigne calculée. Il ne commande ni le mode HVAC, ni les plages horaires internes des vannes. Les consignes doivent rester compatibles avec ton matériel.
-- Activer la simulation suspend les commandes, y compris les consignes de fin. Les règles précédemment appliquées sont conservées pour réconciliation lorsque la simulation est désactivée.
+- Pour chaque entité, la priorité la plus élevée gagne. À égalité : identifiant de règle, puis identifiant d’événement. Quand le gagnant finit, une autre règle encore active prend le relais ; sinon l’action après du dernier gagnant est exécutée. Une seule règle gagne par entité, même si des règles concernent des paramètres différents.
+- Suppression d’un événement ou d’une règle active : exécution de son action après, une fois la synchronisation réussie. Même principe lors d’un changement de calendrier.
+- Les erreurs Google n’entraînent aucune nouvelle commande. Les erreurs HA sont retentées. L’état persistant permet de reprendre une règle après redémarrage. Une commande peut être répétée après une coupure entre son envoi et la sauvegarde : préférer des actions explicites telles que `turn_on`, `turn_off` et `set_temperature`, plutôt que `toggle` ou une action irréversible. Il n’y a pas de garantie « exactement une fois ».
+- L’action pendant est exécutée à l’activation, au changement du gagnant ou de ses paramètres, puis mémorisée : elle n’est pas renvoyée toutes les minutes. Chaque nouvelle occurrence d’événement peut déclencher l’action, même avec les mêmes paramètres. L’action après ne restaure pas automatiquement l’état précédent.
+- Activer la simulation suspend les commandes, y compris les actions après. Les règles précédemment appliquées sont conservées pour réconciliation lorsque la simulation est désactivée.
 
-L’interface présente les événements à venir et les commandes calculées lors de la dernière synchronisation. Elle ne fournit pas encore un historique d’exécution ni un calcul détaillé de toutes les futures actions. V1 limitée aux températures ; d’autres services HA pourront être ajoutés ensuite.
+L’interface présente les événements à venir et les commandes calculées lors de la dernière synchronisation. Elle ne fournit pas encore un historique d’exécution ni un calcul détaillé de toutes les futures actions. Chaque phase d’une règle contient une action sur une entité ; pour plusieurs entités, créer plusieurs règles.
 
 ## Développement et vérification
 

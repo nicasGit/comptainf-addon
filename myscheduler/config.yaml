@@ -1,8 +1,8 @@
 name: MyScheduler
-version: "0.1.2"
+version: "0.2.0"
 slug: myscheduler
 url: https://github.com/nicasGit/comptainf-addon/blob/main/MyScheduler.md
-description: Pilote les thermostats depuis Google Calendar
+description: Planifie les actions de tes entités Home Assistant depuis Google Calendar
 arch:
   - aarch64
   - amd64
