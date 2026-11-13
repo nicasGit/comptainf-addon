@@ -1,7 +1,7 @@
 import { servicesForEntity } from './home-assistant.mjs';
 import { entityName, serviceName, valueLabel, searchText } from './labels.mjs';
 import { eventMode } from './actions.mjs';
-import { eventColors, colorName } from './event-colors.mjs';
+import { eventColors, colorName, validHex } from './event-colors.mjs';
 
 const $ = id => document.getElementById(id);
 let csrf;
@@ -67,12 +67,19 @@ function renderStatus(status) {
   notice(status.message);
   $('syncTime').textContent = status.lastSync ? `Dernière synchronisation : ${new Date(status.lastSync).toLocaleString()}` : 'Pas encore synchronisé';
   $('actions').textContent = status.actions.map(a => `${a.entity} → ${a.service} ${JSON.stringify(a.data)} (${a.phase === 'after' ? 'après' : a.phase === 'schedule' ? 'plage horaire' : 'pendant'})`).join('\n') || 'Aucune action';
-  $('events').textContent = status.events.map(e => {
+  $('events').replaceChildren();
+  for (const e of status.events) {
     const calendar = availableCalendars.find(c => c.id === e.calendarId);
-    const color = colorName(e.colorId);
-    return e.allDay ? `${e.start} → ${e.end} (fin exclue) · Toute la journée · [${calendar?.summary || e.calendarId || 'Calendrier'}] ${e.title} · ${color}`
+    const color = e.colorLabel || colorName(e.colorId);
+    const text = e.allDay ? `${e.start} → ${e.end} (fin exclue) · Toute la journée · [${calendar?.summary || e.calendarId || 'Calendrier'}] ${e.title} · ${color}`
       : `${new Date(e.start).toLocaleString()} → ${new Date(e.end).toLocaleString()} · [${calendar?.summary || e.calendarId || 'Calendrier'}] ${e.title} · ${color}`;
-  }).join('\n') || 'Aucun événement';
+    const line = element('div', undefined, 'event-line');
+    const swatch = element('span', undefined, 'event-swatch'); swatch.setAttribute('aria-hidden', 'true');
+    if (validHex(e.colorHex)) swatch.style.backgroundColor = e.colorHex;
+    swatch.title = `${color}${e.colorHex ? ` · ${e.colorHex}` : ''}`;
+    line.append(swatch, element('span', text)); $('events').append(line);
+  }
+  if (!status.events.length) $('events').textContent = 'Aucun événement';
 }
 
 const fieldNames = {

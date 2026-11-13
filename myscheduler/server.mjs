@@ -3,10 +3,11 @@ import { readFile, writeFile, rename, mkdir } from 'node:fs/promises';
 import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { plan, validateRules } from './engine.mjs';
-import { calendarIds, collectEvents } from './calendars.mjs';
+import { calendarIds } from './calendars.mjs';
 import { actionSignature } from './actions.mjs';
 import { createHomeAssistant } from './home-assistant.mjs';
 import { calendarSnapshot } from './snapshot.mjs';
+import { collectColoredEvents } from './colored-events.mjs';
 
 const directory = process.env.DATA_DIR || './data';
 await mkdir(directory, { recursive: true, mode: 0o700 });
@@ -69,11 +70,17 @@ async function google(path, query = {}) {
   } while (pageToken);
   return items;
 }
+async function googleResource(path, query = {}) {
+  const token = await accessToken();
+  const url = new URL(`https://www.googleapis.com/calendar/v3/${path}`);
+  for (const [key, value] of Object.entries(query)) url.searchParams.set(key, value);
+  return remote(url, { headers: { Authorization: `Bearer ${token}` } });
+}
 async function tick() {
   if (busy) return;
   busy = true;
   try {
-    const snapshotCalendar = await calendarSnapshot(state.config.rules, () => collectEvents(state.config.calendarIds, google));
+    const snapshotCalendar = await calendarSnapshot(state.config.rules, () => collectColoredEvents(state.config.calendarIds, google, googleResource));
     const { events } = snapshotCalendar;
     const result = plan(events, state.config.rules, state.config.dryRun ? { ...state.active, ...simulatedActive } : state.active, Date.now(), snapshotCalendar);
     const actions = Object.values(result.desired);
@@ -96,7 +103,7 @@ async function tick() {
       simulatedActive = {};
     } else simulatedActive = result.active;
     status = { message: `${state.config.dryRun ? 'Simulation : aucune commande envoyée.' : 'Planification active.'}${snapshotCalendar.warning ? ` ${snapshotCalendar.warning}` : ''}`,
-      events: events.map(e => ({ title: e.summary || '', calendarId: e.calendarId, colorId: e.colorId || null, allDay: Boolean(e.start?.date), start: e.start?.dateTime || e.start?.date, end: e.end?.dateTime || e.end?.date })),
+      events: events.map(e => ({ title: e.summary || '', calendarId: e.calendarId, colorId: e.colorId || null, colorHex: e.colorHex, colorLabel: e.colorLabel, colorSource: e.colorSource, allDay: Boolean(e.start?.date), start: e.start?.dateTime || e.start?.date, end: e.end?.dateTime || e.end?.date })),
       actions, lastSync: new Date().toISOString() };
   } catch (e) { status.message = e.message; }
   finally { busy = false; }

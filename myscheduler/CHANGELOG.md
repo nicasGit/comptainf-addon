@@ -1,3 +1,10 @@
+# 0.5.1
+
+- Affichage de pastilles de couleur et récupération de la couleur héritée du calendrier.
+- Lecture des nouveaux libellés de couleur Google en complément des colorId historiques.
+- Reconnaissance des couleurs standard des nouveaux libellés pour les filtres existants.
+- Distinction entre couleur propre à l’événement, héritée du calendrier et non renseignée.
+
 # 0.5.0
 
 - Filtre optionnel mot-clé ET couleur de l’événement Google, dont Myrtille (bleu).
