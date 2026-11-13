@@ -1,12 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 
 test('HTTP interface, protected settings and OAuth initiation', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'myscheduler-test-'));
+  // Existing 0.1.0 installation, without credentials or network requests.
+  await writeFile(join(directory, 'state.json'), JSON.stringify({ config: {
+    clientId: '', clientSecret: '', redirectUri: '', calendarId: 'legacy@example.com', dryRun: true, rules: []
+  }, tokens: {}, active: {}, applied: {} }));
   const child = spawn(process.execPath, ['myscheduler/server.mjs'], {
     env: { ...process.env, SUPERVISOR_TOKEN: '', DATA_DIR: directory, PORT: '18099' }, stdio: 'pipe'
   });
@@ -21,17 +25,24 @@ test('HTTP interface, protected settings and OAuth initiation', async () => {
     assert.ok(response?.ok, 'server starts');
     const state = await response.json();
     assert.equal(state.config.dryRun, true);
+    assert.deepEqual(state.config.calendarIds, ['legacy@example.com']);
+    assert.equal(state.config.calendarId, undefined);
     assert.equal(state.config.clientSecret, undefined);
     assert.ok(state.csrf);
     assert.match(await (await fetch(base)).text(), /MyScheduler/);
     assert.equal((await fetch(base + 'api/disconnect', { method: 'POST' })).status, 403);
     const headers = { 'Content-Type': 'application/json', 'X-CSRF-Token': state.csrf };
-    const config = { clientId: 'test', clientSecret: 'secret', redirectUri: 'http://localhost:18099/oauth/callback', calendarId: 'primary', dryRun: true, rules: [] };
+    const config = { clientId: 'test', clientSecret: 'secret', redirectUri: 'http://localhost:18099/oauth/callback', calendarIds: ['primary', 'work@example.com'], dryRun: true, rules: [] };
     const saved = await fetch(base + 'api/config', { method: 'POST', headers, body: JSON.stringify(config) });
     assert.equal(saved.status, 200);
     const publicState = await (await fetch(base + 'api/state')).json();
     assert.equal(publicState.secretSaved, true);
     assert.equal(publicState.config.clientSecret, undefined);
+    assert.deepEqual(publicState.config.calendarIds, config.calendarIds);
+    assert.deepEqual(JSON.parse(await readFile(join(directory, 'state.json'), 'utf8')).config.calendarIds, config.calendarIds);
+    const invalid = await fetch(base + 'api/config', { method: 'POST', headers, body: JSON.stringify({ ...config, calendarIds: [] }) });
+    assert.equal(invalid.status, 400);
+    assert.deepEqual((await (await fetch(base + 'api/state')).json()).config.calendarIds, config.calendarIds);
     const connect = await fetch(base + 'api/connect', { method: 'POST', headers });
     const target = new URL((await connect.json()).url);
     assert.equal(target.hostname, 'accounts.google.com');

@@ -4,7 +4,7 @@
 <style>
 :root{font-family:system-ui;color:#e6edf6;background:#111a28;color-scheme:dark}body{max-width:960px;margin:32px auto;padding:0 20px}h1{margin-bottom:4px}p{color:#acbdd0;line-height:1.6}section{background:#1a2739;border:1px solid #30445f;border-radius:14px;padding:22px;margin:20px 0}label{display:block;margin:14px 0 5px}input,select,button{font:inherit;padding:10px;border-radius:7px;border:1px solid #46607d}input:not([type=checkbox]),select{box-sizing:border-box;width:100%;background:#101c2e}button{cursor:pointer;background:#235780;color:white;margin:8px 6px 0 0}button.secondary{background:#293c52}.rule{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;border-top:1px solid #46607d;margin-top:20px;padding-top:10px}.rule label{margin:0}.rule input{margin-top:5px}.wide{grid-column:1/-1}pre{white-space:pre-wrap;overflow-wrap:anywhere}#notice{position:sticky;top:0;background:#223b57;padding:12px;border-radius:8px;z-index:1}small{color:#acbdd0}@media(max-width:600px){.rule{grid-template-columns:1fr}}
 </style>
-<h1>MyScheduler</h1><p>Ton calendrier Google pilote tes thermostats.</p>
+<h1>MyScheduler</h1><p>Tes calendriers Google pilotent tes thermostats.</p>
 <div id="notice" role="status">Chargement…</div>
 <section><h2>1 · Connexion Google</h2>
 <p>Créer un client OAuth « Application Web » avec l’API Google Calendar activée. L’accès demandé est en lecture seule.</p>
@@ -14,9 +14,11 @@
 <p><small id="suggestion"></small></p>
 <button id="save">Enregistrer la configuration</button><button id="connect">Connecter Google ↗</button><button class="secondary" id="disconnect">Déconnecter</button>
 <p id="connection"></p></section>
-<section><h2>2 · Calendrier et règles</h2>
-<label for="calendarId">Identifiant du calendrier</label><input id="calendarId" value="primary" list="calendars"><datalist id="calendars"></datalist>
+<section><h2>2 · Calendriers et règles</h2>
+<p>Coche les calendriers à surveiller. Les règles s’appliquent aux événements de tous les calendriers sélectionnés.</p>
+<div id="calendars" role="group" aria-label="Calendriers à surveiller"></div>
 <button class="secondary" id="list">Charger mes calendriers</button>
+<p><small>Enregistre après avoir changé la sélection. Au moins un calendrier est nécessaire.</small></p>
 <p>Le mot-clé est recherché dans le titre, sans tenir compte des majuscules. La priorité la plus élevée gagne. À égalité, l’identifiant de règle départage les actions.</p>
 <div id="rules"></div><button class="secondary" id="add">Ajouter une règle</button>
 <label><input type="checkbox" id="dryRun" checked> Simulation : ne pas commander les appareils</label>
@@ -26,12 +28,20 @@
 <script type="module">
 const $ = id => document.getElementById(id);
 let csrf;
+let selectedCalendars = new Set(['primary']);
+let availableCalendars = [];
+function renderCalendars(){
+ const choices=new Map(availableCalendars.map(c=>[c.id,c.summary||c.id]));
+ for(const id of selectedCalendars)if(!choices.has(id))choices.set(id,id==='primary'?'Calendrier principal':id);
+ $('calendars').replaceChildren();
+ for(const [id,name] of choices){const label=document.createElement('label');const input=document.createElement('input');input.type='checkbox';input.checked=selectedCalendars.has(id);input.onchange=()=>{if(input.checked)selectedCalendars.add(id);else selectedCalendars.delete(id);};label.append(input,document.createTextNode(` ${name}`));$('calendars').append(label);}
+}
 function notice(message){ $('notice').textContent=message; }
 async function api(path, data){
  const response=await fetch(`api/${path}`,data===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify(data)});
  const result=await response.json();if(!response.ok)throw Error(result.error||'Erreur de connexion');return result;
 }
-function renderStatus(status){notice(status.message);$('syncTime').textContent=status.lastSync?`Dernière synchronisation : ${new Date(status.lastSync).toLocaleString()}`:'Pas encore synchronisé';$('actions').textContent=status.actions.map(a=>`${a.entity} → ${a.temperature} °C`).join('\n')||'Aucune action';$('events').textContent=status.events.map(e=>`${new Date(e.start).toLocaleString()} → ${new Date(e.end).toLocaleString()} · ${e.title}`).join('\n')||'Aucun événement';}
+function renderStatus(status){notice(status.message);$('syncTime').textContent=status.lastSync?`Dernière synchronisation : ${new Date(status.lastSync).toLocaleString()}`:'Pas encore synchronisé';$('actions').textContent=status.actions.map(a=>`${a.entity} → ${a.temperature} °C`).join('\n')||'Aucune action';$('events').textContent=status.events.map(e=>{const calendar=availableCalendars.find(c=>c.id===e.calendarId);return `${new Date(e.start).toLocaleString()} → ${new Date(e.end).toLocaleString()} · [${calendar?.summary||e.calendarId||'Calendrier'}] ${e.title}`;}).join('\n')||'Aucun événement';}
 function addRule(rule={id:crypto.randomUUID(),keyword:'Présence',entity:'climate.salon',temperature:21,endTemperature:17,priority:0}){
  const row=document.createElement('div');row.className='rule';row.dataset.id=rule.id;
  for(const [key,label,type] of [['keyword','Mot-clé','text'],['entity','Entité Home Assistant','text'],['temperature','Température pendant (°C)','number'],['endTemperature','Température après (°C)','number'],['priority','Priorité','number']]){
@@ -41,15 +51,15 @@ function addRule(rule={id:crypto.randomUUID(),keyword:'Présence',entity:'climat
 }
 async function save(){
  const rules=[...$('rules').children].map(row=>{const r={id:row.dataset.id};for(const input of row.querySelectorAll('input'))r[input.dataset.key]=input.type==='number'?Number(input.value):input.value;return r;});
- await api('config',{clientId:$('clientId').value,clientSecret:$('clientSecret').value,redirectUri:$('redirectUri').value,calendarId:$('calendarId').value,dryRun:$('dryRun').checked,rules});$('clientSecret').value='';notice('Configuration enregistrée.');
+ await api('config',{clientId:$('clientId').value,clientSecret:$('clientSecret').value,redirectUri:$('redirectUri').value,calendarIds:[...selectedCalendars],dryRun:$('dryRun').checked,rules});$('clientSecret').value='';notice('Configuration enregistrée.');
 }
 function action(id,handler){$(id).onclick=async()=>{try{await handler();}catch(e){notice(e.message);}};}
 action('save',save);action('saveRules',save);action('add',()=>addRule());
 action('connect',async()=>{const result=await api('connect',{});const link=document.createElement('a');link.href=result.url;link.target='_blank';link.rel='noopener';link.textContent='Ouvrir la connexion Google';$('connection').replaceChildren(link);notice('Clique sur le lien pour autoriser Google dans un nouvel onglet.');});
 action('disconnect',async()=>{await api('disconnect',{});$('connection').textContent='Déconnecté';notice('Compte déconnecté. Les thermostats conservent leur consigne actuelle.');});
-action('list',async()=>{const calendars=await api('calendars',{});$('calendars').replaceChildren();for(const c of calendars){const option=document.createElement('option');option.value=c.id;option.label=c.summary;$('calendars').append(option);}notice('Calendriers chargés : choisir un identifiant dans le champ calendrier.');});
+action('list',async()=>{availableCalendars=await api('calendars',{});const primary=availableCalendars.find(c=>c.primary);if(primary&&selectedCalendars.delete('primary'))selectedCalendars.add(primary.id);renderCalendars();notice('Coche les calendriers souhaités puis enregistre.');});
 action('sync',async()=>renderStatus(await api('sync',{})));
-try{const s=await api('state');csrf=s.csrf;for(const key of ['clientId','redirectUri','calendarId'])$(key).value=s.config[key];$('dryRun').checked=s.config.dryRun;s.config.rules.forEach(addRule);$('connection').textContent=s.connected?'Compte Google connecté':'Compte Google non connecté';renderStatus(s.status);
+try{const s=await api('state');csrf=s.csrf;for(const key of ['clientId','redirectUri'])$(key).value=s.config[key];selectedCalendars=new Set(s.config.calendarIds||[s.config.calendarId||'primary']);renderCalendars();$('dryRun').checked=s.config.dryRun;s.config.rules.forEach(addRule);$('connection').textContent=s.connected?'Compte Google connecté':'Compte Google non connecté';renderStatus(s.status);
  const base=location.pathname.endsWith('/')?location.pathname:location.pathname+'/';$('suggestion').textContent=`Chemin de retour attendu : ${base}oauth/callback. Utiliser le domaine HTTPS de Home Assistant avec ce chemin.`;
 }catch(e){notice(e.message);}
 setInterval(async()=>{try{const s=await api('state');renderStatus(s.status);$('connection').textContent=s.connected?'Compte Google connecté':'Compte Google non connecté';}catch{}},15000);

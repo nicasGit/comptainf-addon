@@ -1,6 +1,10 @@
 # MyScheduler · add-on Home Assistant OS
 
-Première version : connexion directe à Google Calendar en lecture seule, sélection d’un calendrier, règles par mots-clés et consignes de température sur les entités `climate` Home Assistant (notamment les vannes Zigbee2MQTT découvertes par MQTT).
+Connexion directe à Google Calendar en lecture seule, sélection de plusieurs calendriers du même compte, règles par mots-clés et consignes de température sur les entités `climate` Home Assistant (notamment les vannes Zigbee2MQTT découvertes par MQTT).
+
+## Version 0.1.1 : plusieurs calendriers
+
+Après mise à jour, le calendrier et la connexion Google existants sont conservés. Cliquer **Charger mes calendriers**, cocher les calendriers souhaités (1 à 20), puis **Enregistrer**. Les règles s’appliquent à tous les calendriers sélectionnés, avec les mêmes priorités entre calendriers. Les événements affichent leur calendrier d’origine. Si un calendrier est inaccessible, la synchronisation entière est suspendue : aucune consigne de fin n’est déduite d’une lecture partielle.
 
 ## Installation locale sur HAOS
 
@@ -17,7 +21,7 @@ Architectures : amd64 et aarch64. La construction télécharge l’image Node of
 3. Créer un client OAuth de type **Application Web**. Conserver l’identifiant client et le secret.
 4. Ouvrir l’interface MyScheduler par l’accès HTTPS de Home Assistant, sur un domaine accepté par Google. Repérer le chemin de retour indiqué dans l’interface. Construire l’URL complète avec ce domaine, par exemple `https://ha.exemple.ch/api/hassio_ingress/SESSION/oauth/callback`. Enregistrer exactement cette URL dans les URI de redirection autorisés du client Google, puis dans MyScheduler.
 5. Enregistrer les identifiants dans MyScheduler puis cliquer **Connecter Google** et ouvrir le lien dans un nouvel onglet. Autoriser la lecture du calendrier avec le compte personnel.
-6. Charger les calendriers, sélectionner leur identifiant, enregistrer.
+6. Charger les calendriers, cocher ceux à surveiller et enregistrer.
 
 Google impose HTTPS et des règles sur le domaine de retour ; une IP locale ou `homeassistant.local` ne constitue pas une configuration OAuth Web utilisable. L’exception HTTP localhost sert uniquement au développement. Garder le même navigateur et la session Home Assistant ouverte pendant le retour OAuth. Le chemin Ingress contient une session : si elle change ou expire, actualiser l’URL dans Google Cloud et dans MyScheduler puis reconnecter. Cette V1 nécessite donc une configuration manuelle de l’URL ; elle ne fournit pas de relais OAuth externe. Si ton accès HA ne permet pas ce retour HTTPS, il faudra adapter le flux avant utilisation.
 

@@ -3,6 +3,7 @@ import { readFile, writeFile, rename, mkdir } from 'node:fs/promises';
 import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { plan, validateRules } from './engine.mjs';
+import { calendarIds, collectEvents } from './calendars.mjs';
 
 const directory = process.env.DATA_DIR || './data';
 await mkdir(directory, { recursive: true, mode: 0o700 });
@@ -10,7 +11,10 @@ const file = `${directory}/state.json`;
 let state;
 try { state = JSON.parse(await readFile(file, 'utf8')); }
 catch (e) { if (e.code !== 'ENOENT') throw e; }
-state ||= { config: { clientId: '', clientSecret: '', redirectUri: '', calendarId: 'primary', dryRun: true, rules: [] }, tokens: {}, active: {}, applied: {} };
+state ||= { config: { clientId: '', clientSecret: '', redirectUri: '', calendarIds: ['primary'], dryRun: true, rules: [] }, tokens: {}, active: {}, applied: {} };
+// Preserve the existing calendar and Google authorization when upgrading from 0.1.0.
+state.config.calendarIds = calendarIds(state.config);
+delete state.config.calendarId;
 // Serialize writes so simultaneous refresh/config operations cannot corrupt the file.
 let saving = Promise.resolve();
 function save() {
@@ -64,11 +68,7 @@ async function tick() {
   if (busy) return;
   busy = true;
   try {
-    const events = await google(`calendars/${encodeURIComponent(state.config.calendarId)}/events`, {
-      singleEvents: 'true', orderBy: 'startTime', maxResults: '2500',
-      timeMin: new Date(Date.now() - 86400000).toISOString(),
-      timeMax: new Date(Date.now() + 7 * 86400000).toISOString()
-    });
+    const events = await collectEvents(state.config.calendarIds, google);
     const result = plan(events, state.config.rules, state.config.dryRun ? { ...state.active, ...simulatedActive } : state.active);
     const actions = Object.entries(result.desired).map(([entity, temperature]) => ({ entity, temperature }));
     // Retain outgoing rules until every command succeeds, including across restart.
@@ -94,7 +94,7 @@ async function tick() {
       simulatedActive = {};
     } else simulatedActive = result.active;
     status = { message: state.config.dryRun ? 'Simulation : aucune commande envoyée.' : 'Planification active.',
-      events: events.filter(e => e.start?.dateTime).map(e => ({ title: e.summary || '', start: e.start.dateTime, end: e.end?.dateTime })),
+      events: events.filter(e => e.start?.dateTime).map(e => ({ title: e.summary || '', calendarId: e.calendarId, start: e.start.dateTime, end: e.end?.dateTime })),
       actions, lastSync: new Date().toISOString() };
   } catch (e) { status.message = e.message; }
   finally { busy = false; }
@@ -141,12 +141,13 @@ const server = http.createServer(async (req, res) => {
       const redirect = new URL(input.redirectUri);
       if (!(redirect.protocol === 'https:' || (redirect.protocol === 'http:' && redirect.hostname === 'localhost')) || !redirect.pathname.endsWith('/oauth/callback') || redirect.search || redirect.hash || redirect.username || redirect.password) throw Error('URL de retour HTTPS finissant par /oauth/callback requise (localhost autorisé en développement).');
       validateRules(input.rules);
-      if (typeof input.clientId !== 'string' || !input.clientId.trim() || typeof input.calendarId !== 'string' || !input.calendarId.trim() || typeof input.dryRun !== 'boolean') throw Error('Configuration incomplète.');
+      const selectedCalendars = calendarIds(input);
+      if (typeof input.clientId !== 'string' || !input.clientId.trim() || typeof input.dryRun !== 'boolean') throw Error('Configuration incomplète.');
       if (input.clientSecret && typeof input.clientSecret !== 'string') throw Error('Secret invalide.');
       if (!(input.clientSecret || state.config.clientSecret)) throw Error('Secret OAuth requis.');
       if (input.clientId !== state.config.clientId) state.tokens = {};
       state.config = { clientId: input.clientId.trim(), clientSecret: input.clientSecret || state.config.clientSecret,
-        redirectUri: input.redirectUri, calendarId: input.calendarId, dryRun: input.dryRun, rules: input.rules };
+        redirectUri: input.redirectUri, calendarIds: selectedCalendars, dryRun: input.dryRun, rules: input.rules };
       pending = null;
       await save(); json(res, { ok: true }); return;
     }
