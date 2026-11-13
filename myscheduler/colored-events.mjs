@@ -14,12 +14,12 @@ export async function collectColoredEvents(ids, list, resource, now = Date.now()
   for (const id of ids) {
     const calendar = calendars.find(calendar => calendar.id === id || id === 'primary' && calendar.primary) || {};
     const details = await resource(`calendars/${encodeURIComponent(id)}`);
-    metadata.set(id, { calendar, labels: details.labelProperties?.eventLabels || [] });
+    metadata.set(id, { calendar, calendarName: calendar.summaryOverride || calendar.summary || details.summary || id, labels: details.labelProperties?.eventLabels || [] });
   }
   return legacy.map(event => {
     const current = modernById.get(event.id);
     const combined = { ...event, eventLabelId: current?.eventLabelId || event.eventLabelId || null };
-    const { calendar, labels } = metadata.get(event.calendarId);
-    return { ...combined, ...resolveEventColor(combined, labels, calendar, palette) };
+    const { calendar, calendarName, labels } = metadata.get(event.calendarId);
+    return { ...combined, calendarName, ...resolveEventColor(combined, labels, calendar, palette) };
   });
 }

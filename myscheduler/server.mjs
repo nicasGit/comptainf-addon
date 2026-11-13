@@ -103,7 +103,7 @@ async function tick() {
       simulatedActive = {};
     } else simulatedActive = result.active;
     status = { message: `${state.config.dryRun ? 'Simulation : aucune commande envoyée.' : 'Planification active.'}${snapshotCalendar.warning ? ` ${snapshotCalendar.warning}` : ''}`,
-      events: events.map(e => ({ title: e.summary || '', calendarId: e.calendarId, colorId: e.colorId || null, colorHex: e.colorHex, colorLabel: e.colorLabel, colorSource: e.colorSource, allDay: Boolean(e.start?.date), start: e.start?.dateTime || e.start?.date, end: e.end?.dateTime || e.end?.date })),
+      events: events.map(e => ({ title: e.summary || '', calendarId: e.calendarId, calendarName: e.calendarName, colorId: e.colorId || null, colorHex: e.colorHex, colorLabel: e.colorLabel, colorSource: e.colorSource, allDay: Boolean(e.start?.date), start: e.start?.dateTime || e.start?.date, end: e.end?.dateTime || e.end?.date })),
       actions, lastSync: new Date().toISOString() };
   } catch (e) { status.message = e.message; }
   finally { busy = false; }

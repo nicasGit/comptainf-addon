@@ -54,7 +54,7 @@ function labeled(parent, text, input) {
   const label = element('label', text); label.append(input); parent.append(label); return input;
 }
 function renderCalendars() {
-  const choices = new Map(availableCalendars.map(c => [c.id, c.summary || c.id]));
+  const choices = new Map(availableCalendars.map(c => [c.id, c.summaryOverride || c.summary || c.id]));
   for (const id of selectedCalendars) if (!choices.has(id)) choices.set(id, id === 'primary' ? 'Calendrier principal' : id);
   $('calendars').replaceChildren();
   for (const [id, name] of choices) {
@@ -70,9 +70,10 @@ function renderStatus(status) {
   $('events').replaceChildren();
   for (const e of status.events) {
     const calendar = availableCalendars.find(c => c.id === e.calendarId);
+    const calendarLabel = e.calendarName || calendar?.summaryOverride || calendar?.summary || e.calendarId || 'Calendrier';
     const color = e.colorLabel || colorName(e.colorId);
-    const text = e.allDay ? `${e.start} → ${e.end} (fin exclue) · Toute la journée · [${calendar?.summary || e.calendarId || 'Calendrier'}] ${e.title} · ${color}`
-      : `${new Date(e.start).toLocaleString()} → ${new Date(e.end).toLocaleString()} · [${calendar?.summary || e.calendarId || 'Calendrier'}] ${e.title} · ${color}`;
+    const text = e.allDay ? `${e.start} → ${e.end} (fin exclue) · Toute la journée · [${calendarLabel}] ${e.title} · ${color}`
+      : `${new Date(e.start).toLocaleString()} → ${new Date(e.end).toLocaleString()} · [${calendarLabel}] ${e.title} · ${color}`;
     const line = element('div', undefined, 'event-line');
     const swatch = element('span', undefined, 'event-swatch'); swatch.setAttribute('aria-hidden', 'true');
     if (validHex(e.colorHex)) swatch.style.backgroundColor = e.colorHex;

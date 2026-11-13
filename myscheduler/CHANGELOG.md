@@ -1,3 +1,9 @@
+# 0.5.3
+
+- Nom du calendrier conservé dans les événements synchronisés et affiché après rechargement de la page.
+- Prise en compte du nom personnalisé Google, du nom partagé et du nom de la ressource, dans cet ordre.
+- L’affichage ne dépend plus du bouton « Charger mes calendriers ».
+
 # 0.5.2
 
 - Filtre mot-clé ET code hexadécimal personnalisé, par exemple #b3dc6c.

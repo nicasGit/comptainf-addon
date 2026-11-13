@@ -31,7 +31,7 @@ test('merge legacy and modern event reads with calendar metadata', async () => {
   let modernRead = false;
   const event = { id: 'event', summary: 'Baptiste', start: { date: '2026-11-13' }, end: { date: '2026-11-14' } };
   const list = async (path, query) => {
-    if (path === 'users/me/calendarList') return [{ id: 'owner@example.com', primary: true, backgroundColor: '#3f51b5' }];
+    if (path === 'users/me/calendarList') return [{ id: 'owner@example.com', primary: true, summary: 'Calendrier personnel', backgroundColor: '#3f51b5' }];
     if (query.eventLabelVersion === '1') { modernRead = true; return [{ ...event, eventLabelId: 'blue' }]; }
     return [event];
   };
@@ -41,5 +41,20 @@ test('merge legacy and modern event reads with calendar metadata', async () => {
   assert.equal(events[0].colorLabel, 'Myrtille (bleu)');
   assert.equal(events[0].colorSource, 'event');
   assert.equal(events[0].resolvedColorId, '9');
+  assert.equal(events[0].calendarName, 'Calendrier personnel');
   await assert.rejects(collectColoredEvents(['primary'], list, async () => { throw Error('Metadata unavailable'); }), /Metadata unavailable/);
+});
+test('calendar names prefer personal alias, then shared name, then resource name', async () => {
+  const id = '47r4o@group.calendar.google.com';
+  for (const [entry, details, expected] of [
+    [{ id, summary: 'Famille', summaryOverride: 'Mon calendrier partagé' }, { summary: 'Original' }, 'Mon calendrier partagé'],
+    [{ id, summary: 'Famille' }, { summary: 'Original' }, 'Famille'],
+    [{ id }, { summary: 'Original' }, 'Original']
+  ]) {
+    const list = async path => path === 'users/me/calendarList' ? [entry] : [{ id: 'event', summary: 'Test' }];
+    const resource = async path => path === 'colors' ? {} : details;
+    const result = await collectColoredEvents([id], list, resource);
+    assert.equal(result[0].calendarName, expected);
+    assert.equal(result[0].calendarId, id);
+  }
 });
