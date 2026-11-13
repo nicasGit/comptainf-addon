@@ -48,10 +48,11 @@ function renderCalendars() {
 function renderStatus(status) {
   notice(status.message);
   $('syncTime').textContent = status.lastSync ? `Dernière synchronisation : ${new Date(status.lastSync).toLocaleString()}` : 'Pas encore synchronisé';
-  $('actions').textContent = status.actions.map(a => `${a.entity} → ${a.service} ${JSON.stringify(a.data)} (${a.phase === 'after' ? 'après' : 'pendant'})`).join('\n') || 'Aucune action';
+  $('actions').textContent = status.actions.map(a => `${a.entity} → ${a.service} ${JSON.stringify(a.data)} (${a.phase === 'after' ? 'après' : a.phase === 'schedule' ? 'plage horaire' : 'pendant'})`).join('\n') || 'Aucune action';
   $('events').textContent = status.events.map(e => {
     const calendar = availableCalendars.find(c => c.id === e.calendarId);
-    return `${new Date(e.start).toLocaleString()} → ${new Date(e.end).toLocaleString()} · [${calendar?.summary || e.calendarId || 'Calendrier'}] ${e.title}`;
+    return e.allDay ? `${e.start} → ${e.end} (fin exclue) · Toute la journée · [${calendar?.summary || e.calendarId || 'Calendrier'}] ${e.title}`
+      : `${new Date(e.start).toLocaleString()} → ${new Date(e.end).toLocaleString()} · [${calendar?.summary || e.calendarId || 'Calendrier'}] ${e.title}`;
   }).join('\n') || 'Aucun événement';
 }
 
@@ -113,18 +114,18 @@ function fieldControl(key, field, entity, value, change) {
   };
   return input;
 }
-function renderAction(parent, rule, phase) {
-  const box = element('fieldset'); box.append(element('legend', phase === 'during' ? 'Pendant l’événement' : 'Après l’événement'));
+function renderAction(parent, rule, phase, title, owner = rule) {
+  const box = element('fieldset'); box.append(element('legend', title || (phase === 'during' ? 'Pendant l’événement' : 'Après l’événement / hors plages')));
   parent.append(box);
   const entity = catalog.entities.find(e => e.entity_id === rule.entity);
   const services = servicesForEntity(entity, catalog.services);
-  const action = rule[phase];
+  const action = owner[phase];
   const select = element('select'); option(select, '', 'Choisir une action');
   for (const service of services) option(select, service.id, service.name ? `${service.name} · ${service.id}` : service.id);
   if (action.service && !services.some(s => s.id === action.service)) option(select, action.service, `${action.service} (enregistrée, disponibilité à vérifier)`);
   select.value = action.service; select.required = true;
   labeled(box, 'Action', select);
-  select.onchange = () => { rule[phase] = { service: select.value, data: {} }; renderRules(); };
+  select.onchange = () => { owner[phase] = { service: select.value, data: {} }; renderRules(); };
   if (!action.service) {
     box.append(element('p', services.length ? 'Choisis une action pour afficher ses paramètres.' : 'Choisis une entité commandable et charge les entités Home Assistant. Les capteurs en lecture seule n’ont pas de paramètres modifiables.'));
     return;
@@ -155,6 +156,61 @@ function renderAction(parent, rule, phase) {
   };
   labeled(details, 'Paramètres supplémentaires uniquement', json); box.append(details);
 }
+const weekdays = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+function renderSchedule(parent, rule) {
+  const box = element('div', undefined, 'wide schedule');
+  const enabled = element('input'); enabled.type = 'checkbox'; enabled.checked = Boolean(rule.allDay?.enabled);
+  const toggle = element('label'); toggle.append(enabled, document.createTextNode(' Prendre en compte les événements « toute la journée »'));
+  box.append(toggle); parent.append(box);
+  enabled.onchange = () => {
+    rule.allDay ||= { enabled: false, timeZone: 'Europe/Zurich', periods: [] };
+    rule.allDay.enabled = enabled.checked; renderRules();
+  };
+  if (!rule.allDay?.enabled) return;
+  const schedule = rule.allDay;
+  const zone = element('input'); zone.value = schedule.timeZone; zone.placeholder = 'Europe/Zurich'; zone.required = true;
+  zone.oninput = () => { schedule.timeZone = zone.value; }; labeled(box, 'Fuseau horaire des plages', zone);
+  box.append(element('p', 'Le mot-clé doit correspondre à un événement du calendrier. Les jours cochés sont les jours de début des plages. Une fin inférieure ou égale au début signifie le lendemain (22:00 → 07:00 passe minuit).'));
+  box.append(element('p', 'Sans plage : action pendant toute la journée. Avec des plages : aucune action avant la première plage ; à la fin d’une plage, l’action après s’applique, sauf si une autre plage ou règle prend le relais. Une plage de nuit se termine le lendemain même si l’événement ne couvre que la veille.'));
+  for (const [index, period] of schedule.periods.entries()) {
+    const slot = element('fieldset', undefined, 'period'); slot.append(element('legend', `Plage ${index + 1}`));
+    const days = element('div', undefined, 'weekdays');
+    for (const [i, name] of weekdays.entries()) {
+      const check = element('input'); check.type = 'checkbox'; check.checked = period.days.includes(i + 1);
+      check.onchange = () => { period.days = check.checked ? [...period.days, i + 1].sort((a, b) => a - b) : period.days.filter(day => day !== i + 1); };
+      const label = element('label'); label.append(check, document.createTextNode(` ${name}`)); days.append(label);
+    }
+    slot.append(days);
+    const times = element('div', undefined, 'times');
+    for (const [key, name] of [['start', 'Début'], ['end', 'Fin']]) {
+      const time = element('input'); time.type = 'time'; time.value = period[key]; time.required = true;
+      time.oninput = () => { period[key] = time.value; }; labeled(times, name, time);
+    }
+    slot.append(times);
+    const mode = element('select');
+    option(mode, 'during', 'Utiliser l’action pendant'); option(mode, 'after', 'Utiliser l’action après'); option(mode, 'custom', 'Action spécifique pour cette plage');
+    mode.value = period.mode;
+    mode.onchange = () => { period.mode = mode.value; if (period.mode === 'custom') period.action ||= { service: '', data: {} }; renderRules(); };
+    labeled(slot, 'Action de cette plage', mode);
+    if (period.mode === 'custom') renderAction(slot, rule, 'action', 'Action spécifique', period);
+    const remove = element('button', 'Supprimer la plage', 'secondary'); remove.onclick = () => { schedule.periods = schedule.periods.filter(p => p !== period); renderRules(); };
+    slot.append(remove); box.append(slot);
+  }
+  const add = element('button', 'Ajouter une plage', 'secondary');
+  add.onclick = () => { schedule.periods.push({ id: createRuleId(), days: [5], start: '19:00', end: '22:00', mode: 'during' }); renderRules(); }; box.append(add);
+  if (!schedule.periods.length) {
+    const example = element('button', 'Préremplir vendredi, week-end et mercredi', 'secondary');
+    example.onclick = () => {
+      schedule.periods = [
+        { id: createRuleId(), days: [5], start: '19:00', end: '22:00', mode: 'during' },
+        { id: createRuleId(), days: [6, 7], start: '07:00', end: '22:00', mode: 'during' },
+        { id: createRuleId(), days: [5, 6], start: '22:00', end: '07:00', mode: 'after' },
+        { id: createRuleId(), days: [3], start: '07:00', end: '00:00', mode: 'custom', action: { service: '', data: {} } }
+      ]; renderRules();
+    }; box.append(example);
+    box.append(element('small', 'Cet exemple utilise pendant pour monter, après pour baisser et une action spécifique à choisir pour arrêter le mercredi.'));
+  }
+}
 function renderRules() {
   $('rules').replaceChildren();
   for (const rule of rules) {
@@ -180,6 +236,7 @@ function renderRules() {
     select.onchange = () => {
       rule.entity = select.value;
       rule.during = { service: '', data: {} }; rule.after = { service: '', data: {} };
+      for (const period of rule.allDay?.periods || []) if (period.mode === 'custom') period.action = { service: '', data: {} };
       renderRules();
     };
     const entity = catalog.entities.find(e => e.entity_id === rule.entity);
@@ -188,6 +245,7 @@ function renderRules() {
     }
     row.append(entityBox);
     renderAction(row, rule, 'during'); renderAction(row, rule, 'after');
+    renderSchedule(row, rule);
     const remove = element('button', 'Supprimer cette règle', 'secondary');
     remove.onclick = () => { rules = rules.filter(r => r !== rule); renderRules(); }; row.append(remove);
     $('rules').append(row);

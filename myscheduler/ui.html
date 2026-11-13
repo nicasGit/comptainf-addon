@@ -4,6 +4,7 @@
 <style>
 :root{font-family:system-ui;color:#e6edf6;background:#111a28;color-scheme:dark}body{max-width:960px;margin:32px auto;padding:0 20px}h1{margin-bottom:4px}p{color:#acbdd0;line-height:1.6}section{background:#1a2739;border:1px solid #30445f;border-radius:14px;padding:22px;margin:20px 0}label{display:block;margin:14px 0 5px}input,select,textarea,button{font:inherit;padding:10px;border-radius:7px;border:1px solid #46607d}input:not([type=checkbox]),select,textarea{box-sizing:border-box;width:100%;background:#101c2e}button{cursor:pointer;background:#235780;color:white;margin:8px 6px 0 0}button.secondary{background:#293c52}.rule{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;border-top:1px solid #46607d;margin-top:20px;padding-top:10px}.rule label{margin:0}.rule input{margin-top:5px}.wide{grid-column:1/-1}pre{white-space:pre-wrap;overflow-wrap:anywhere}#notice{position:sticky;top:0;background:#223b57;padding:12px;border-radius:8px;z-index:1}small{color:#acbdd0}@media(max-width:600px){.rule{grid-template-columns:1fr}}
 fieldset{min-width:0;border:1px solid #46607d;border-radius:8px;padding:14px}legend{font-weight:600}details{margin-top:12px}summary{cursor:pointer}label>input,label>select,label>textarea{display:block;margin-top:5px}label>input[type=checkbox]{display:inline}textarea{font-family:monospace;resize:vertical}select{max-width:100%}</style>
+<style>.schedule{border-top:1px solid #46607d;padding-top:12px}.period{margin:16px 0}.weekdays{display:flex;gap:8px;flex-wrap:wrap}.weekdays label{padding:6px;background:#22354d;border-radius:6px}.times{display:grid;grid-template-columns:1fr 1fr;gap:12px}.schedule small{display:block;margin-top:10px}</style>
 <h1>MyScheduler</h1><p>Tes calendriers Google pilotent tes entités Home Assistant.</p>
 <div id="notice" role="status">Chargement…</div>
 <section><h2>1 · Connexion Google</h2>
@@ -22,7 +23,7 @@ fieldset{min-width:0;border:1px solid #46607d;border-radius:8px;padding:14px}leg
 <p>Le mot-clé est recherché dans le titre, sans tenir compte des majuscules. La priorité la plus élevée gagne. À égalité, l’identifiant de règle départage les actions.</p>
 <button class="secondary" id="loadEntities">Charger les entités Home Assistant</button><p id="catalogStatus" role="status">Chargement des entités…</p><div id="rules"></div><button class="secondary" id="add">Ajouter une règle</button>
 <label><input type="checkbox" id="dryRun" checked> Simulation : ne pas commander les appareils</label>
-<p><small>Seuls les événements avec horaires sont pris en compte. Les actions « après » sont explicites : elles ne restaurent pas automatiquement l’état précédent.</small></p>
+<p><small>Les événements avec horaires utilisent leurs heures. Pour les journées entières, active l’option et configure les plages dans chaque règle. Les actions « après » ne restaurent pas automatiquement l’état précédent.</small></p>
 <button id="saveRules">Enregistrer</button><button id="sync">Synchroniser maintenant</button></section>
 <section><h2>3 · État et prochaines échéances</h2><p id="syncTime"></p><h3>Actions calculées</h3><pre id="actions"></pre><h3>Événements · 7 jours</h3><pre id="events"></pre></section>
 <script type="module" src="ui.mjs"></script></html>

@@ -41,7 +41,8 @@ test('HTTP interface, protected settings and OAuth initiation', async () => {
     assert.equal((await fetch(base + 'api/disconnect', { method: 'POST' })).status, 403);
     const headers = { 'Content-Type': 'application/json', 'X-CSRF-Token': state.csrf };
     const genericRule = { id: 'light-rule', keyword: 'Présence', entity: 'light.salon', priority: 0,
-      during: { service: 'light.turn_on', data: { brightness_pct: 60 } }, after: { service: 'light.turn_off', data: {} } };
+      during: { service: 'light.turn_on', data: { brightness_pct: 60 } }, after: { service: 'light.turn_off', data: {} },
+      allDay: { enabled: true, timeZone: 'Europe/Zurich', periods: [{ id: 'evening', days: [5], start: '19:00', end: '22:00', mode: 'during' }] } };
     const config = { clientId: 'test', clientSecret: 'secret', redirectUri: 'http://localhost:18099/oauth/callback', calendarIds: ['primary', 'work@example.com'], dryRun: true, rules: [genericRule] };
     const saved = await fetch(base + 'api/config', { method: 'POST', headers, body: JSON.stringify(config) });
     assert.equal(saved.status, 200);

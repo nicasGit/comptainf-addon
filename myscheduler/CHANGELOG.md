@@ -1,3 +1,12 @@
+# 0.3.0
+
+- Événements Google toute la journée, activables par règle avec le même mot-clé.
+- Plages par jour de semaine, heures de début/fin et fuseau horaire explicite.
+- Plages traversant minuit et gestion des changements d’heure.
+- Actions pendant, après ou spécifiques à une plage ; exemple vendredi/week-end/mercredi prérempli.
+- Affichage des journées entières et rejet des plages qui se chevauchent.
+- Comportement existant conservé tant que l’option journée entière reste désactivée.
+
 # 0.2.0
 
 - Règles génériques : recherche et choix d’une entité Home Assistant, puis action et paramètres distincts pendant et après l’événement.

@@ -94,7 +94,7 @@ async function tick() {
       simulatedActive = {};
     } else simulatedActive = result.active;
     status = { message: state.config.dryRun ? 'Simulation : aucune commande envoyée.' : 'Planification active.',
-      events: events.filter(e => e.start?.dateTime).map(e => ({ title: e.summary || '', calendarId: e.calendarId, start: e.start.dateTime, end: e.end?.dateTime })),
+      events: events.map(e => ({ title: e.summary || '', calendarId: e.calendarId, allDay: Boolean(e.start?.date), start: e.start?.dateTime || e.start?.date, end: e.end?.dateTime || e.end?.date })),
       actions, lastSync: new Date().toISOString() };
   } catch (e) { status.message = e.message; }
   finally { busy = false; }

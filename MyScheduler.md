@@ -2,6 +2,27 @@
 
 Connexion directe à Google Calendar en lecture seule, sélection de plusieurs calendriers du même compte et règles par mots-clés pour les entités Home Assistant : thermostats, lumières, interrupteurs, volets, ventilateurs et autres entités exposant des actions ciblées.
 
+## Version 0.3.0 : événements toute la journée et plages par jour
+
+Dans chaque règle, activer **Prendre en compte les événements « toute la journée »**, puis choisir le fuseau horaire (par défaut `Europe/Zurich`). Les événements avec horaires continuent d’utiliser leurs heures, indépendamment de ces plages. Les règles existantes gardent l’option désactivée après mise à jour.
+
+Sans plage, l’action pendant s’applique de minuit au minuit final de l’événement. Avec des plages, chaque plage indique ses jours de début, son heure de début et de fin, et l’action à appliquer : action pendant, action après ou action spécifique avec ses propres paramètres. Une fin inférieure ou égale au début est située le lendemain ; deux heures identiques représentent 24 heures. Les chevauchements au sein d’une règle sont refusés, y compris entre deux jours ou dimanche et lundi.
+
+Le bouton **Préremplir vendredi, week-end et mercredi** crée cet exemple à personnaliser :
+
+| Début | Plage | Action |
+| --- | --- | --- |
+| Vendredi | 19:00–22:00 | Pendant, par exemple température haute |
+| Samedi et dimanche | 07:00–22:00 | Pendant |
+| Vendredi et samedi | 22:00–07:00 le lendemain | Après, par exemple température basse |
+| Mercredi | 07:00–00:00 | Action spécifique à choisir, par exemple `climate.set_hvac_mode` avec `hvac_mode: off` |
+
+Ces plages ne s’activent **que si un événement toute la journée contient le mot-clé** et couvre leur date de début. Un événement de plusieurs jours est traité pour chaque jour couvert. Une plage de nuit peut finir après la dernière date couverte par l’événement : un événement uniquement le vendredi autorise donc sa plage vendredi 22:00 → samedi 07:00, mais pas la plage de jour du samedi.
+
+Avant la première plage, aucune nouvelle action n’est envoyée. À la fin d’une plage, l’action après est envoyée si aucune autre plage ou règle n’est active. Elle s’applique aussi après une plage spécifique : elle doit donc correspondre au comportement souhaité hors plages. Les plages sont des fenêtres actives, pas des commandes à rejouer si l’add-on était arrêté pendant toute la fenêtre.
+
+Les frontières sont évaluées dans le fuseau choisi, même si le conteneur utilise UTC. Lors du passage à l’heure d’été, une heure inexistante est décalée vers l’avant de la durée du saut ; lors du passage à l’heure d’hiver, la première occurrence d’une heure répétée est retenue. La fin d’un événement Google en journée entière est exclusive. L’interface affiche aussi les événements toute la journée.
+
 ## Version 0.2.0 : actions génériques
 
 L’éditeur charge les entités et les actions déclarées par Home Assistant. Pour chaque règle :
@@ -52,7 +73,7 @@ Les secrets et jetons sont stockés dans `/data/state.json`, avec permissions re
 - Exemple : titre contenant « Présence », entité `climate.salon`, action `climate.set_temperature` avec température 21 pendant et 17 après, priorité 0.
 - La simulation est activée à l’installation. Vérifier les actions calculées avant de la désactiver et d’enregistrer.
 - Actualisation toutes les 60 secondes, événements des sept prochains jours et de la dernière journée. Les événements déjà en cours sont repris au démarrage ; les événements entièrement terminés pendant une panne ne sont pas rejoués.
-- Récurrences développées par Google ; événements avec horaires uniquement. Les journées entières sont ignorées. Les dates avec décalage horaire sont comparées en temps absolu.
+- Récurrences développées par Google. Les événements avec horaires sont comparés en temps absolu ; les événements toute la journée suivent l’option et le fuseau propres à chaque règle.
 - Pour chaque entité, la priorité la plus élevée gagne. À égalité : identifiant de règle, puis identifiant d’événement. Quand le gagnant finit, une autre règle encore active prend le relais ; sinon l’action après du dernier gagnant est exécutée. Une seule règle gagne par entité, même si des règles concernent des paramètres différents.
 - Suppression d’un événement ou d’une règle active : exécution de son action après, une fois la synchronisation réussie. Même principe lors d’un changement de calendrier.
 - Les erreurs Google n’entraînent aucune nouvelle commande. Les erreurs HA sont retentées. L’état persistant permet de reprendre une règle après redémarrage. Une commande peut être répétée après une coupure entre son envoi et la sauvegarde : préférer des actions explicites telles que `turn_on`, `turn_off` et `set_temperature`, plutôt que `toggle` ou une action irréversible. Il n’y a pas de garantie « exactement une fois ».
@@ -72,6 +93,6 @@ node myscheduler/server.mjs
 
 Ouvrir `http://localhost:8099/`. Les données locales vont dans `data/` (ignoré par Git). Pour OAuth local, enregistrer `http://localhost:8099/oauth/callback` chez Google. Hors HAOS, garder la simulation : les commandes nécessitent le jeton Supervisor injecté par HAOS.
 
-Tests du moteur : limites temporelles, fuseaux, priorités, reprise persistante, annulation, événements à la journée et validation. La connexion Google réelle et la commande de vraies vannes nécessitent ton installation.
+Tests du moteur : limites temporelles, fuseaux et changements d’heure, plages quotidiennes et nocturnes, priorités, reprise persistante, annulation, événements à la journée et validation. La connexion Google réelle et la commande de vraies vannes nécessitent ton installation.
 
 Références : [configuration des add-ons](https://developers.home-assistant.io/docs/apps/configuration/), [API Calendar events.list](https://developers.google.com/workspace/calendar/api/v3/reference/events/list).

@@ -1,4 +1,5 @@
 import { normalizeRule, validateAction, command } from './actions.mjs';
+import { validateSchedule, eventActivation } from './schedule.mjs';
 
 export function validateRules(rules) {
   if (!Array.isArray(rules) || rules.length > 100) throw Error('Maximum 100 règles.');
@@ -11,21 +12,22 @@ export function validateRules(rules) {
     if (typeof r.entity !== 'string' || !/^[a-z0-9_]+\.[a-z0-9_]+$/.test(r.entity)) throw Error('Entité Home Assistant invalide.');
     validateAction(r.during, r.entity);
     validateAction(r.after, r.entity);
+    validateSchedule(r.allDay, r.entity);
     if (!Number.isInteger(r.priority) || Math.abs(r.priority) > 1000) throw Error('Priorité entière entre -1000 et 1000.');
     return r;
   });
 }
 
-// All-day events are deliberately excluded in v1: no implicit timezone conversion.
+// Timed events retain their hours; all-day events use the rule's local schedule.
 export function plan(events, rules, previous = {}, now = Date.now()) {
   const candidates = {};
   const normalized = rules.map(normalizeRule);
   for (const event of events) {
-    if (event.status === 'cancelled' || !event.start?.dateTime || !event.end?.dateTime) continue;
-    if (!(Date.parse(event.start.dateTime) <= now && now < Date.parse(event.end.dateTime))) continue;
     for (const rule of normalized) {
       if (!String(event.summary || '').toLocaleLowerCase('fr').includes(rule.keyword.trim().toLocaleLowerCase('fr'))) continue;
-      (candidates[rule.entity] ||= []).push({ ...rule, eventId: event.id });
+      const activation = eventActivation(event, rule, now);
+      if (!activation) continue;
+      (candidates[rule.entity] ||= []).push({ ...rule, eventId: activation.eventId, currentAction: activation.action, phase: activation.phase });
     }
   }
   const active = {};
@@ -33,7 +35,7 @@ export function plan(events, rules, previous = {}, now = Date.now()) {
   for (const [entity, matches] of Object.entries(candidates)) {
     matches.sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id) || a.eventId.localeCompare(b.eventId));
     active[entity] = matches[0];
-    desired[entity] = command(entity, matches[0].during, matches[0].eventId, 'during');
+    desired[entity] = command(entity, matches[0].currentAction, matches[0].eventId, matches[0].phase);
   }
   for (const [entity, input] of Object.entries(previous)) {
     const rule = normalizeRule(input);
