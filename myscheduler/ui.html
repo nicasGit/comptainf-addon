@@ -7,6 +7,7 @@ fieldset{min-width:0;border:1px solid #b9c9db;border-radius:8px;padding:14px}leg
 <style>.schedule{border-top:1px solid #d5dfeb;padding-top:12px}.period{margin:16px 0}.weekdays{display:flex;gap:8px;flex-wrap:wrap}.weekdays label{padding:6px;background:#eaf1f9;border-radius:6px}.times{display:grid;grid-template-columns:1fr 1fr;gap:12px}.schedule small{display:block;margin-top:10px}</style>
 <style>.program-card{background:#fff;border:1px solid #cad8e7;border-radius:12px;margin:14px 0;overflow:hidden}.program-card>summary{padding:18px;list-style:none;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}.program-card>summary:before{content:"+";font-weight:700;color:#1965ab}.program-card[open]>summary:before{content:"-"}.program-card[open]>summary{border-bottom:1px solid #d5dfeb}.program-card>.rule{border:0;margin:0;padding:18px}.badge{font-size:.8rem;padding:4px 8px;background:#e5eef9;color:#24527d;border-radius:16px}.program-entity,.program-overview{flex-basis:100%;font-size:.88rem;color:#526174}.program-overview{line-height:1.7}.paused>summary{background:#f1f3f6}.program-toolbar{display:grid;grid-template-columns:2fr 1fr;gap:14px}@media(max-width:600px){.program-toolbar{grid-template-columns:1fr}}</style><h1>MyScheduler</h1><p>Tes calendriers Google pilotent tes entités Home Assistant.</p>
 <div id="notice" role="status">Chargement…</div>
+<section id="upcomingPanel"><h2>État et prochaines échéances</h2><p id="syncTime"></p><h3>Actions calculées</h3><pre id="actions"></pre><h3>Événements · 7 jours</h3><pre id="events"></pre></section>
 <section id="programsPanel"><h2>Mes programmes</h2>
 <p>Le mot-clé est recherché dans le titre, sans tenir compte des majuscules. La priorité la plus élevée gagne. À égalité, l’identifiant de règle départage les actions.</p>
 <p id="programCount"></p>
@@ -16,7 +17,6 @@ fieldset{min-width:0;border:1px solid #b9c9db;border-radius:8px;padding:14px}leg
 <label><input type="checkbox" id="dryRun" checked> Simulation : ne pas commander les appareils</label>
 <p><small>Choisis les types d’événements pris en compte dans chaque règle calendrier. Les événements avec horaires utilisent leurs heures ; les journées entières peuvent suivre des plages. Les actions « après » ne restaurent pas automatiquement l’état précédent.</small></p>
 <button id="saveRules">Enregistrer</button><button id="sync">Synchroniser maintenant</button></section>
-<section id="upcomingPanel"><h2>État et prochaines échéances</h2><p id="syncTime"></p><h3>Actions calculées</h3><pre id="actions"></pre><h3>Événements · 7 jours</h3><pre id="events"></pre></section>
 <details class="settings-card" id="googlePanel"><summary>Connexion Google <span class="badge" id="googleSetupState">Facultative</span></summary><div class="settings-content">
 <p>Créer un client OAuth « Application Web » avec l’API Google Calendar activée. L’accès demandé est en lecture seule.</p>
 <label for="clientId">Identifiant client Google</label><input id="clientId" autocomplete="off">

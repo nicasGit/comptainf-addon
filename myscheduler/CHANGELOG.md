@@ -1,3 +1,7 @@
+# 0.4.3
+
+- Carte « État et prochaines échéances » placée avant les programmes.
+
 # 0.4.2
 
 - Choix du type d’événements par règle : avec horaires uniquement, avec horaires et journées entières, ou journées entières uniquement.
