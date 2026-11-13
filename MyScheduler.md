@@ -2,6 +2,12 @@
 
 Connexion directe à Google Calendar en lecture seule, sélection de plusieurs calendriers du même compte et règles par mots-clés pour les entités Home Assistant : thermostats, lumières, interrupteurs, volets, ventilateurs et autres entités exposant des actions ciblées.
 
+## Version 0.5.2 : filtre par code couleur personnalisé
+
+Dans **Couleur de l’événement (ET le mot-clé)**, choisir **Couleur personnalisée**, puis saisir le code exact affiché dans les événements à venir, par exemple `#b3dc6c`. L’événement doit contenir le mot-clé ET présenter cette couleur. Le format requis est `#RRGGBB`, sans distinction de majuscules ; aucune approximation de teinte n’est appliquée.
+
+Le filtre hexadécimal utilise la couleur affichée, qu’elle provienne de l’événement ou du calendrier. Les filtres nommés (Myrtille, etc.) conservent leur sens précédent : couleur propre à l’événement uniquement. Les résumés et la recherche affichent le code personnalisé.
+
 ## Version 0.5.1 : affichage et lecture des couleurs Google
 
 Les événements à venir affichent une pastille et la couleur réellement obtenue de Google. La couleur héritée est lue depuis les métadonnées du calendrier et indiquée comme telle (par exemple **Myrtille (bleu), héritée du calendrier**, ou le code hexadécimal). Si aucune information n’est disponible, l’interface indique que la couleur n’est pas renseignée, sans inventer de couleur.

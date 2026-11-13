@@ -27,14 +27,17 @@ export function resolveEventColor(event, labels = [], calendar = {}, palette = {
 }
 export function colorName(id) {
   if (!id || id === 'default') return 'Couleur du calendrier';
+  if (validHex(id)) return `Couleur personnalisée ${validHex(id)}`;
   return eventColors.find(([value]) => value === String(id))?.[1] || `Couleur ${id}`;
 }
 export function matchesColor(event, colorId) {
   if (!colorId) return true;
+  if (validHex(colorId)) return validHex(event.colorHex) === validHex(colorId);
   if (colorId === 'default') return !event.colorId && !event.eventLabelId;
   return String(event.resolvedColorId || event.colorId || '') === colorId;
 }
 export function validateColor(colorId) {
   if (colorId === undefined || colorId === '' || colorId === 'default') return;
+  if (validHex(colorId)) return;
   if (typeof colorId !== 'string' || !eventColors.some(([id]) => id === colorId)) throw Error('Couleur d’événement Google invalide.');
 }

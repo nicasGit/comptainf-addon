@@ -1,3 +1,9 @@
+# 0.5.2
+
+- Filtre mot-clé ET code hexadécimal personnalisé, par exemple #b3dc6c.
+- Correspondance exacte sur la couleur affichée, propre à l’événement ou héritée du calendrier.
+- Validation du format #RRGGBB, affichage du code dans les résumés et recherche.
+
 # 0.5.1
 
 - Affichage de pastilles de couleur et récupération de la couleur héritée du calendrier.

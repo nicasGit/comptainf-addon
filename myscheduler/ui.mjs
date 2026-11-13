@@ -290,10 +290,16 @@ function renderRules() {
       const color = element('select'); option(color, '', 'Toutes les couleurs (mot-clé seul)');
       for (const [id, name] of eventColors) option(color, id, name);
       option(color, 'default', 'Sans couleur propre (héritée du calendrier)');
-      color.value = rule.eventColorId || '';
-      color.onchange = () => { rule.eventColorId = color.value; refreshSummary(); };
+      option(color, 'custom', 'Couleur personnalisée · code hexadécimal affiché');
+      color.value = rule.eventColorId?.startsWith('#') ? 'custom' : rule.eventColorId || '';
+      color.onchange = () => { rule.eventColorId = color.value === 'custom' ? '#' : color.value; renderRules(); };
       labeled(row, 'Couleur de l’événement (ET le mot-clé)', color);
-      row.append(element('small', 'La couleur choisie doit être attribuée à l’événement dans Google. Un événement bleu par héritage du calendrier ne correspond pas à Myrtille.', 'wide'));
+      if (color.value === 'custom') {
+        const hex = element('input'); hex.type = 'text'; hex.value = rule.eventColorId; hex.placeholder = '#b3dc6c'; hex.pattern = '#[a-fA-F0-9]{6}'; hex.required = true; hex.maxLength = 7;
+        hex.oninput = () => { rule.eventColorId = hex.value.toLowerCase() || '#'; refreshSummary(); };
+        labeled(row, 'Code couleur exact (#RRGGBB)', hex);
+        row.append(element('small', 'Copie le code affiché dans les événements à venir, par exemple #b3dc6c. Ce filtre correspond à la couleur affichée, y compris lorsqu’elle est héritée du calendrier.', 'wide'));
+      } else row.append(element('small', 'Les noms standard comme Myrtille ciblent la couleur propre à l’événement. Pour utiliser un code affiché ou une couleur héritée, choisis Couleur personnalisée.', 'wide'));
     }
     const priority = element('input'); priority.type = 'number'; priority.step = '1'; priority.min = '-1000'; priority.max = '1000'; priority.value = rule.priority; priority.required = true;
     priority.oninput = () => { rule.priority = Number(priority.value); refreshSummary(); }; labeled(row, 'Priorité', priority);
