@@ -1,5 +1,5 @@
 name: MyScheduler
-version: "0.4.1"
+version: "0.4.2"
 slug: myscheduler
 url: https://github.com/nicasGit/comptainf-addon/blob/main/MyScheduler.md
 description: Planifie les actions de tes entités Home Assistant depuis Google Calendar

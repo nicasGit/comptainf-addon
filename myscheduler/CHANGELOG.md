@@ -1,3 +1,9 @@
+# 0.4.2
+
+- Choix du type d’événements par règle : avec horaires uniquement, avec horaires et journées entières, ou journées entières uniquement.
+- Comportement des règles existantes conservé automatiquement.
+- Chargement des entités déplacé dans une carte repliée en bas, avec nombre d’entités visible.
+
 # 0.4.1
 
 - Programmes et prochaines échéances placés en tête de page.

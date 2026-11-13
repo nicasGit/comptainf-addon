@@ -1,4 +1,4 @@
-import { normalizeRule, validateAction, command } from './actions.mjs';
+import { normalizeRule, validateAction, command, eventMode } from './actions.mjs';
 import { validateSchedule, eventActivation } from './schedule.mjs';
 
 export function validateRules(rules) {
@@ -9,6 +9,10 @@ export function validateRules(rules) {
     if (!r.id || typeof r.id !== 'string' || ids.has(r.id)) throw Error('Identifiants de règles uniques requis.');
     ids.add(r.id);
     if (r.source !== undefined && !['calendar', 'weekly'].includes(r.source)) throw Error('Source de programme invalide.');
+    if (r.source !== 'weekly') {
+      if (!['timed', 'all_day', 'both'].includes(eventMode(r))) throw Error('Type d’événements invalide.');
+      if (eventMode(r) !== 'timed' && !r.allDay?.enabled) throw Error('Configurer les journées entières pour ce type d’événements.');
+    }
     if (r.enabled !== undefined && typeof r.enabled !== 'boolean') throw Error('Activation invalide.');
     if (r.name !== undefined && (typeof r.name !== 'string' || r.name.length > 120)) throw Error('Nom de programme invalide (120 caractères maximum).');
     if (r.source !== 'weekly' && (typeof r.keyword !== 'string' || !r.keyword.trim())) throw Error('Mot-clé requis.');

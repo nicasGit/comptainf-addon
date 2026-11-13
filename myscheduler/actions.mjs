@@ -1,5 +1,6 @@
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const reserved = new Set(['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id', 'target']);
+export function eventMode(rule) { return rule.eventMode ?? (rule.allDay?.enabled ? 'both' : 'timed'); }
 
 export function normalizeRule(rule) {
   if (rule.during || rule.after) return { ...rule };

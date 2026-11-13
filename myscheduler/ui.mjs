@@ -1,5 +1,6 @@
 import { servicesForEntity } from './home-assistant.mjs';
 import { entityName, serviceName, valueLabel, searchText } from './labels.mjs';
+import { eventMode } from './actions.mjs';
 
 const $ = id => document.getElementById(id);
 let csrf;
@@ -177,14 +178,21 @@ function renderSchedule(parent, rule) {
   const box = element('div', undefined, 'wide schedule');
   const weekly = rule.source === 'weekly';
   if (weekly) rule.weekly ||= { enabled: true, timeZone: 'Europe/Zurich', periods: [{ id: createRuleId(), days: [1, 2, 3], start: '07:00', end: '22:00', mode: 'during' }] };
-  const enabled = element('input'); enabled.type = 'checkbox'; enabled.checked = Boolean(rule.allDay?.enabled);
-  const toggle = element('label'); toggle.append(enabled, document.createTextNode(' Prendre en compte les événements « toute la journée »'));
-  if (!weekly) box.append(toggle); parent.append(box);
-  enabled.onchange = () => {
-    rule.allDay ||= { enabled: false, timeZone: 'Europe/Zurich', periods: [] };
-    rule.allDay.enabled = enabled.checked; renderRules();
-  };
-  if (!weekly && !rule.allDay?.enabled) return;
+  if (!weekly) {
+    const mode = element('select');
+    option(mode, 'timed', 'Événements avec horaires uniquement');
+    option(mode, 'both', 'Avec horaires et toute la journée');
+    option(mode, 'all_day', 'Toute la journée uniquement');
+    mode.value = eventMode(rule);
+    mode.onchange = () => {
+      rule.eventMode = mode.value;
+      rule.allDay ||= { enabled: false, timeZone: 'Europe/Zurich', periods: [] };
+      rule.allDay.enabled = mode.value !== 'timed'; renderRules();
+    };
+    labeled(box, 'Événements pris en compte', mode);
+  }
+  parent.append(box);
+  if (!weekly && eventMode(rule) === 'timed') return;
   const schedule = weekly ? rule.weekly : rule.allDay;
   const zone = element('input'); zone.value = schedule.timeZone; zone.placeholder = 'Europe/Zurich'; zone.required = true;
   zone.oninput = () => { schedule.timeZone = zone.value; }; labeled(box, 'Fuseau horaire des plages', zone);
@@ -239,8 +247,9 @@ function programOverview(rule) {
   const schedule = rule.source === 'weekly' ? rule.weekly : rule.allDay?.enabled ? rule.allDay : null;
   if (rule.source === 'weekly' && !schedule) return 'Plages hebdomadaires à configurer';
   if (!schedule) return `Mot-clé : ${rule.keyword || 'à renseigner'} · horaires des événements`;
-  if (!schedule.periods.length) return 'Journées entières · sans plages';
-  return schedule.periods.map(period => `${period.days.map(day => weekdays[day - 1]?.slice(0, 3)).join('/')} ${period.start}–${period.end}${period.end <= period.start ? ' (+1 jour)' : ''} · ${period.mode === 'during' ? 'Pendant' : period.mode === 'after' ? 'Après' : 'Spécifique'}`).join(' | ');
+  const type = rule.source === 'weekly' ? '' : eventMode(rule) === 'all_day' ? 'Journées entières uniquement · ' : 'Avec horaires et journées entières · ';
+  if (!schedule.periods.length) return `${type}sans plages`;
+  return type + schedule.periods.map(period => `${period.days.map(day => weekdays[day - 1]?.slice(0, 3)).join('/')} ${period.start}–${period.end}${period.end <= period.start ? ' (+1 jour)' : ''} · ${period.mode === 'during' ? 'Pendant' : period.mode === 'after' ? 'Après' : 'Spécifique'}`).join(' | ');
 }
 function renderRules() {
   $('rules').replaceChildren();
@@ -313,6 +322,7 @@ async function loadCatalog() {
   catalog = await api('catalog', {});
   catalog.entities.sort((a, b) => entityName(a).localeCompare(entityName(b), 'fr'));
   renderRules(); $('catalogStatus').textContent = `${catalog.entities.length} entités chargées.`;
+  $('entitySetupState').textContent = `${catalog.entities.length} chargée(s)`;
 }
 async function save() {
   for (const control of $('rules').querySelectorAll('input,select,textarea')) if (!control.checkValidity()) {
@@ -363,7 +373,7 @@ try {
   updateSetup(s.connected, true);
   const base = location.pathname.endsWith('/') ? location.pathname : location.pathname + '/';
   $('suggestion').textContent = `Chemin de retour attendu : ${base}oauth/callback. Utiliser le domaine HTTPS de Home Assistant avec ce chemin.`;
-  try { await loadCatalog(); } catch (e) { $('catalogStatus').textContent = e.message; }
+  try { await loadCatalog(); } catch (e) { $('catalogStatus').textContent = e.message; $('entitySetupState').textContent = 'Indisponible'; }
 } catch (e) { notice(e.message); }
 setInterval(async () => {
   try { const s = await api('state'); renderStatus(s.status); updateSetup(s.connected); $('connection').textContent = s.connected ? 'Compte Google connecté' : 'Compte Google non connecté'; } catch {}

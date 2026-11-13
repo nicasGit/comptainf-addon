@@ -1,4 +1,4 @@
-import { validateAction } from './actions.mjs';
+import { validateAction, eventMode } from './actions.mjs';
 
 const dayMs = 86400000;
 const formatters = new Map();
@@ -59,12 +59,14 @@ export function validateSchedule(schedule, entity) {
 
 export function eventActivation(event, rule, now) {
   if (event.status === 'cancelled') return null;
+  const mode = rule.source === 'weekly' ? 'both' : eventMode(rule);
   if (event.start?.dateTime && event.end?.dateTime) {
+    if (mode === 'all_day') return null;
     return Date.parse(event.start.dateTime) <= now && now < Date.parse(event.end.dateTime)
       ? { action: rule.during, eventId: event.id, phase: 'during' } : null;
   }
   const schedule = rule.allDay;
-  if (!schedule?.enabled || !event.start?.date || !event.end?.date) return null;
+  if (mode === 'timed' || !schedule?.enabled || !event.start?.date || !event.end?.date) return null;
   const start = event.start.date;
   const end = event.end.date; // Google end.date is exclusive.
   const local = parts(now, schedule.timeZone);

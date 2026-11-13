@@ -2,6 +2,12 @@
 
 Connexion directe à Google Calendar en lecture seule, sélection de plusieurs calendriers du même compte et règles par mots-clés pour les entités Home Assistant : thermostats, lumières, interrupteurs, volets, ventilateurs et autres entités exposant des actions ciblées.
 
+## Version 0.4.2 : filtre des types d’événements
+
+Chaque règle calendrier propose **Événements pris en compte** : avec horaires uniquement, avec horaires et toute la journée, ou toute la journée uniquement. Ce dernier mode ignore tous les événements avec heures, même si leur titre correspond au mot-clé. Les modes incluant les journées entières permettent de configurer les plages et le fuseau. Les programmes hebdomadaires restent indépendants de ce filtre. Les règles existantes conservent automatiquement leur comportement précédent.
+
+Le chargement des entités Home Assistant est regroupé dans une troisième carte repliée en bas. Le chargement automatique est conservé et le nombre d’entités reste visible dans son en-tête.
+
 ## Version 0.4.1 : programmes au premier plan
 
 Les programmes et les prochaines échéances sont placés en tête de page. La connexion Google et la sélection des calendriers sont dans deux cartes repliables en bas, fermées une fois Google connecté et des calendriers sélectionnés. Cliquer leur titre pour modifier la configuration ; le nombre de calendriers et l’état de connexion restent visibles. L’enregistrement des calendriers replie les cartes après configuration, sans modifier la sélection.
