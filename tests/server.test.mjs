@@ -33,7 +33,7 @@ test('HTTP interface, protected settings and OAuth initiation', async () => {
     assert.equal(state.config.clientSecret, undefined);
     assert.ok(state.csrf);
     assert.match(await (await fetch(base)).text(), /MyScheduler/);
-    for (const module of ['ui.mjs', 'home-assistant.mjs', 'actions.mjs']) {
+    for (const module of ['ui.mjs', 'home-assistant.mjs', 'actions.mjs', 'labels.mjs']) {
       const asset = await fetch(base + module);
       assert.equal(asset.status, 200);
       assert.match(asset.headers.get('Content-Type'), /javascript/);

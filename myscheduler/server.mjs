@@ -120,7 +120,7 @@ const server = http.createServer(async (req, res) => {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.end(await readFile(fileURLToPath(new URL('./ui.html', import.meta.url)))); return;
     }
-    if (req.method === 'GET' && ['/ui.mjs', '/home-assistant.mjs', '/actions.mjs'].includes(path)) {
+    if (req.method === 'GET' && ['/ui.mjs', '/home-assistant.mjs', '/actions.mjs', '/labels.mjs'].includes(path)) {
       res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
       res.end(await readFile(fileURLToPath(new URL(`.${path}`, import.meta.url)))); return;
     }

@@ -1,3 +1,10 @@
+# 0.3.1
+
+- Thème clair avec formulaires blancs et contrastes adaptés.
+- Correspondances françaises des noms d’entités courants, notamment les réglages de radiateurs Zigbee.
+- Recherche sur les noms français, d’origine et identifiants, sans distinction d’accents.
+- Traduction des actions courantes, des modes et des états affichés ; identifiants et valeurs HA conservés.
+
 # 0.3.0
 
 - Événements Google toute la journée, activables par règle avec le même mot-clé.

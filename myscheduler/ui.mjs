@@ -1,4 +1,5 @@
 import { servicesForEntity } from './home-assistant.mjs';
+import { entityName, serviceName, valueLabel, searchText } from './labels.mjs';
 
 const $ = id => document.getElementById(id);
 let csrf;
@@ -77,7 +78,7 @@ function fieldControl(key, field, entity, value, change) {
   let kind = 'text';
   if (Array.isArray(choices) && !selector.select?.multiple) {
     input = element('select'); option(input, '', 'Non renseigné');
-    for (const choice of choices) option(input, typeof choice === 'object' ? choice.value : choice, typeof choice === 'object' ? choice.label || choice.value : choice);
+    for (const choice of choices) option(input, typeof choice === 'object' ? choice.value : choice, valueLabel(typeof choice === 'object' ? choice.label || choice.value : choice));
     if (value !== undefined && ![...input.options].some(o => o.value === String(value))) option(input, String(value), `${value} (valeur enregistrée)`);
     input.value = value === undefined ? '' : String(value);
     if (choices.some(choice => typeof (typeof choice === 'object' ? choice.value : choice) === 'number')) kind = 'number';
@@ -121,7 +122,7 @@ function renderAction(parent, rule, phase, title, owner = rule) {
   const services = servicesForEntity(entity, catalog.services);
   const action = owner[phase];
   const select = element('select'); option(select, '', 'Choisir une action');
-  for (const service of services) option(select, service.id, service.name ? `${service.name} · ${service.id}` : service.id);
+  for (const service of services) option(select, service.id, `${serviceName(service)} · ${service.id}`);
   if (action.service && !services.some(s => s.id === action.service)) option(select, action.service, `${action.service} (enregistrée, disponibilité à vérifier)`);
   select.value = action.service; select.required = true;
   labeled(box, 'Action', select);
@@ -138,7 +139,7 @@ function renderAction(parent, rule, phase, title, owner = rule) {
     });
     control.required = Boolean(field.required);
     const unit = field.selector?.number?.unit_of_measurement;
-    labeled(box, `${field.name || fieldNames[key] || key}${unit ? ` (${unit})` : ''}${field.required ? ' *' : ''}`, control);
+    labeled(box, `${fieldNames[key] || field.name || key}${unit ? ` (${unit})` : ''}${field.required ? ' *' : ''}`, control);
     if (field.description) box.append(element('small', field.description));
   }
   if (metadata && !Object.keys(fields).length) box.append(element('p', 'Cette action ne demande aucun paramètre.'));
@@ -225,9 +226,9 @@ function renderRules() {
     const select = element('select'); select.required = true;
     function choices() {
       select.replaceChildren(); option(select, '', 'Choisir une entité');
-      const needle = search.value.toLocaleLowerCase('fr');
-      const matches = catalog.entities.filter(e => e.entity_id === rule.entity || `${e.entity_id} ${e.attributes?.friendly_name || ''}`.toLocaleLowerCase('fr').includes(needle));
-      for (const e of matches) option(select, e.entity_id, `${e.attributes?.friendly_name || e.entity_id} · ${e.entity_id}${e.state === 'unavailable' ? ' (indisponible)' : ''}`);
+      const needle = searchText(search.value);
+      const matches = catalog.entities.filter(e => e.entity_id === rule.entity || searchText(`${e.entity_id} ${e.attributes?.friendly_name || ''} ${entityName(e)}`).includes(needle));
+      for (const e of matches) option(select, e.entity_id, `${entityName(e)} · ${e.entity_id}${e.state === 'unavailable' ? ' (indisponible)' : ''}`);
       if (rule.entity && !matches.some(e => e.entity_id === rule.entity)) option(select, rule.entity, `${rule.entity} (enregistrée)`);
       select.value = rule.entity;
     }
@@ -241,7 +242,7 @@ function renderRules() {
     };
     const entity = catalog.entities.find(e => e.entity_id === rule.entity);
     if (entity) {
-      const details = element('details'); details.append(element('summary', `État actuel : ${entity.state} · attributs en lecture seule`), element('pre', JSON.stringify(entity.attributes, null, 2))); entityBox.append(details);
+      const details = element('details'); details.append(element('summary', `État actuel : ${valueLabel(entity.state)} · attributs en lecture seule`), element('pre', JSON.stringify(entity.attributes, null, 2))); entityBox.append(details);
     }
     row.append(entityBox);
     renderAction(row, rule, 'during'); renderAction(row, rule, 'after');
@@ -253,7 +254,7 @@ function renderRules() {
 }
 async function loadCatalog() {
   catalog = await api('catalog', {});
-  catalog.entities.sort((a, b) => `${a.attributes?.friendly_name || a.entity_id}`.localeCompare(`${b.attributes?.friendly_name || b.entity_id}`));
+  catalog.entities.sort((a, b) => entityName(a).localeCompare(entityName(b), 'fr'));
   renderRules(); $('catalogStatus').textContent = `${catalog.entities.length} entités chargées.`;
 }
 async function save() {

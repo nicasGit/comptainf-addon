@@ -2,6 +2,12 @@
 
 Connexion directe à Google Calendar en lecture seule, sélection de plusieurs calendriers du même compte et règles par mots-clés pour les entités Home Assistant : thermostats, lumières, interrupteurs, volets, ventilateurs et autres entités exposant des actions ciblées.
 
+## Version 0.3.1 : thème clair et libellés français
+
+L’interface utilise un thème clair. Les libellés anglais courants d’entités et les actions sont traduits dans MyScheduler, tout en gardant les identifiants Home Assistant visibles et inchangés. La recherche accepte le nom français, le nom d’origine ou l’identifiant, sans imposer les accents. Les noms personnalisés inconnus sont conservés ; aucun renommage n’est effectué dans HA. Les valeurs des options restent envoyées dans leur format d’origine.
+
+Exemples pour les radiateurs : `Child lock` → Verrouillage enfant ; `Open window` → Détection de fenêtre ouverte ; `Frost protection temperature` → Température de protection antigel ; `Temperature sensor` → Capteur de température ; `Temporary mode duration` → Durée du mode temporaire ; `Valve closing degree` → Degré de fermeture de la vanne. Il s’agit de correspondances d’affichage ; les réglages mécaniques doivent être interprétés selon la documentation du modèle.
+
 ## Version 0.3.0 : événements toute la journée et plages par jour
 
 Dans chaque règle, activer **Prendre en compte les événements « toute la journée »**, puis choisir le fuseau horaire (par défaut `Europe/Zurich`). Les événements avec horaires continuent d’utiliser leurs heures, indépendamment de ces plages. Les règles existantes gardent l’option désactivée après mise à jour.
