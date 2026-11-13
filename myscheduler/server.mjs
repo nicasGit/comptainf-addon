@@ -96,7 +96,7 @@ async function tick() {
       simulatedActive = {};
     } else simulatedActive = result.active;
     status = { message: `${state.config.dryRun ? 'Simulation : aucune commande envoyée.' : 'Planification active.'}${snapshotCalendar.warning ? ` ${snapshotCalendar.warning}` : ''}`,
-      events: events.map(e => ({ title: e.summary || '', calendarId: e.calendarId, allDay: Boolean(e.start?.date), start: e.start?.dateTime || e.start?.date, end: e.end?.dateTime || e.end?.date })),
+      events: events.map(e => ({ title: e.summary || '', calendarId: e.calendarId, colorId: e.colorId || null, allDay: Boolean(e.start?.date), start: e.start?.dateTime || e.start?.date, end: e.end?.dateTime || e.end?.date })),
       actions, lastSync: new Date().toISOString() };
   } catch (e) { status.message = e.message; }
   finally { busy = false; }
@@ -122,7 +122,7 @@ const server = http.createServer(async (req, res) => {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.end(await readFile(fileURLToPath(new URL('./ui.html', import.meta.url)))); return;
     }
-    if (req.method === 'GET' && ['/ui.mjs', '/home-assistant.mjs', '/actions.mjs', '/labels.mjs'].includes(path)) {
+    if (req.method === 'GET' && ['/ui.mjs', '/home-assistant.mjs', '/actions.mjs', '/labels.mjs', '/event-colors.mjs'].includes(path)) {
       res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
       res.end(await readFile(fileURLToPath(new URL(`.${path}`, import.meta.url)))); return;
     }

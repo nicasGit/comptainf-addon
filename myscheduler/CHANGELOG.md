@@ -1,3 +1,10 @@
+# 0.5.0
+
+- Filtre optionnel mot-clé ET couleur de l’événement Google, dont Myrtille (bleu).
+- Compatible avec les événements horaires ou toute la journée selon le mode de la règle.
+- Couleur visible dans les événements et les résumés ; recherche par nom de couleur.
+- Couleur explicite distinguée de celle héritée du calendrier ; règles existantes inchangées.
+
 # 0.4.3
 
 - Carte « État et prochaines échéances » placée avant les programmes.

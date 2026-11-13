@@ -1,6 +1,7 @@
 import { servicesForEntity } from './home-assistant.mjs';
 import { entityName, serviceName, valueLabel, searchText } from './labels.mjs';
 import { eventMode } from './actions.mjs';
+import { eventColors, colorName } from './event-colors.mjs';
 
 const $ = id => document.getElementById(id);
 let csrf;
@@ -68,8 +69,9 @@ function renderStatus(status) {
   $('actions').textContent = status.actions.map(a => `${a.entity} → ${a.service} ${JSON.stringify(a.data)} (${a.phase === 'after' ? 'après' : a.phase === 'schedule' ? 'plage horaire' : 'pendant'})`).join('\n') || 'Aucune action';
   $('events').textContent = status.events.map(e => {
     const calendar = availableCalendars.find(c => c.id === e.calendarId);
-    return e.allDay ? `${e.start} → ${e.end} (fin exclue) · Toute la journée · [${calendar?.summary || e.calendarId || 'Calendrier'}] ${e.title}`
-      : `${new Date(e.start).toLocaleString()} → ${new Date(e.end).toLocaleString()} · [${calendar?.summary || e.calendarId || 'Calendrier'}] ${e.title}`;
+    const color = colorName(e.colorId);
+    return e.allDay ? `${e.start} → ${e.end} (fin exclue) · Toute la journée · [${calendar?.summary || e.calendarId || 'Calendrier'}] ${e.title} · ${color}`
+      : `${new Date(e.start).toLocaleString()} → ${new Date(e.end).toLocaleString()} · [${calendar?.summary || e.calendarId || 'Calendrier'}] ${e.title} · ${color}`;
   }).join('\n') || 'Aucun événement';
 }
 
@@ -258,13 +260,14 @@ function renderRules() {
   $('programCount').textContent = `${rules.length} programme(s) · ${rules.filter(rule => rule.enabled !== false).length} actif(s). Enregistrer pour appliquer les changements.`;
   for (const rule of rules) {
     if (sourceFilter !== 'all' && (rule.source || 'calendar') !== sourceFilter) continue;
-    if (query && !searchText(`${programTitle(rule)} ${rule.keyword || ''} ${rule.entity} ${programOverview(rule)}`).includes(query)) continue;
+    if (query && !searchText(`${programTitle(rule)} ${rule.keyword || ''} ${rule.entity} ${programOverview(rule)} ${rule.eventColorId ? colorName(rule.eventColorId) : ''}`).includes(query)) continue;
     const card = element('details', undefined, `program-card${rule.enabled === false ? ' paused' : ''}`);
     card.open = openPrograms.has(rule.id);
     const summary = element('summary');
     function refreshSummary() {
       summary.replaceChildren(element('strong', programTitle(rule)), element('span', `${rule.enabled === false ? 'En pause' : 'Actif'} · ${rule.source === 'weekly' ? 'Hebdomadaire' : 'Calendrier'} · priorité ${rule.priority}`, 'badge'), element('span', rule.entity || 'Entité à choisir', 'program-entity'), element('span', programOverview(rule), 'program-overview'));
       summary.append(element('span', `Pendant : ${briefAction(rule.during)} | Après : ${briefAction(rule.after)}`, 'program-overview'));
+      if (rule.source !== 'weekly' && rule.eventColorId) summary.append(element('span', `Mot-clé : ${rule.keyword} + couleur : ${colorName(rule.eventColorId)}`, 'program-overview'));
     }
     refreshSummary(); card.append(summary);
     card.ontoggle = () => { if (card.open) openPrograms.add(rule.id); else openPrograms.delete(rule.id); };
@@ -277,6 +280,13 @@ function renderRules() {
     if (rule.source !== 'weekly') {
       const keyword = element('input'); keyword.value = rule.keyword || ''; keyword.required = true; keyword.oninput = () => { rule.keyword = keyword.value; refreshSummary(); };
       labeled(row, 'Mot-clé du titre', keyword);
+      const color = element('select'); option(color, '', 'Toutes les couleurs (mot-clé seul)');
+      for (const [id, name] of eventColors) option(color, id, name);
+      option(color, 'default', 'Sans couleur propre (héritée du calendrier)');
+      color.value = rule.eventColorId || '';
+      color.onchange = () => { rule.eventColorId = color.value; refreshSummary(); };
+      labeled(row, 'Couleur de l’événement (ET le mot-clé)', color);
+      row.append(element('small', 'La couleur choisie doit être attribuée à l’événement dans Google. Un événement bleu par héritage du calendrier ne correspond pas à Myrtille.', 'wide'));
     }
     const priority = element('input'); priority.type = 'number'; priority.step = '1'; priority.min = '-1000'; priority.max = '1000'; priority.value = rule.priority; priority.required = true;
     priority.oninput = () => { rule.priority = Number(priority.value); refreshSummary(); }; labeled(row, 'Priorité', priority);

@@ -2,6 +2,12 @@
 
 Connexion directe à Google Calendar en lecture seule, sélection de plusieurs calendriers du même compte et règles par mots-clés pour les entités Home Assistant : thermostats, lumières, interrupteurs, volets, ventilateurs et autres entités exposant des actions ciblées.
 
+## Version 0.5.0 : mot-clé ET couleur
+
+Dans une règle calendrier, choisir une **Couleur de l’événement (ET le mot-clé)**. L’événement doit satisfaire les deux critères pour activer le programme. Par exemple : titre contenant « Présence », couleur **Myrtille (bleu)** et mode **Toute la journée uniquement** ; les plages de la règle s’appliquent alors uniquement à ces journées.
+
+Le filtre porte sur la couleur explicitement attribuée à l’événement (`colorId` Google, Myrtille = `9`). Un événement qui paraît bleu par héritage de son calendrier n’est pas considéré comme Myrtille. **Sans couleur propre** sélectionne les événements sans `colorId` ; **Toutes les couleurs** conserve le comportement historique par mot-clé seul. Le filtre propose les onze couleurs standard de la palette historique Google ; les nouvelles couleurs personnalisées ne sont pas encore filtrables dans cette version. Les événements affichent leur nom de couleur, et le résumé de programme rappelle la combinaison choisie. Changer la couleur d’un événement actif peut déclencher l’action après lors de la prochaine synchronisation.
+
 ## Version 0.4.2 : filtre des types d’événements
 
 Chaque règle calendrier propose **Événements pris en compte** : avec horaires uniquement, avec horaires et toute la journée, ou toute la journée uniquement. Ce dernier mode ignore tous les événements avec heures, même si leur titre correspond au mot-clé. Les modes incluant les journées entières permettent de configurer les plages et le fuseau. Les programmes hebdomadaires restent indépendants de ce filtre. Les règles existantes conservent automatiquement leur comportement précédent.

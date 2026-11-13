@@ -1,5 +1,6 @@
 import { normalizeRule, validateAction, command, eventMode } from './actions.mjs';
 import { validateSchedule, eventActivation } from './schedule.mjs';
+import { matchesColor, validateColor } from './event-colors.mjs';
 
 export function validateRules(rules) {
   if (!Array.isArray(rules) || rules.length > 100) throw Error('Maximum 100 règles.');
@@ -10,6 +11,7 @@ export function validateRules(rules) {
     ids.add(r.id);
     if (r.source !== undefined && !['calendar', 'weekly'].includes(r.source)) throw Error('Source de programme invalide.');
     if (r.source !== 'weekly') {
+      validateColor(r.eventColorId);
       if (!['timed', 'all_day', 'both'].includes(eventMode(r))) throw Error('Type d’événements invalide.');
       if (eventMode(r) !== 'timed' && !r.allDay?.enabled) throw Error('Configurer les journées entières pour ce type d’événements.');
     }
@@ -48,6 +50,7 @@ export function plan(events, rules, previous = {}, now = Date.now(), { calendarA
     for (const rule of normalized) {
       if (rule.source === 'weekly' || !calendarAvailable) continue;
       if (!String(event.summary || '').toLocaleLowerCase('fr').includes(rule.keyword.trim().toLocaleLowerCase('fr'))) continue;
+      if (!matchesColor(event, rule.eventColorId)) continue;
       const activation = eventActivation(event, rule, now);
       if (!activation) continue;
       (candidates[rule.entity] ||= []).push({ ...rule, eventId: activation.eventId, currentAction: activation.action, phase: activation.phase });
